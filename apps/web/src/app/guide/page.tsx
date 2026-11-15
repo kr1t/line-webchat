@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Bell, Info, Lightbulb, Pin, Search, Settings, Zap } from "lucide-react";
 
 export const metadata: Metadata = { title: "คู่มือ" };
 
@@ -41,8 +42,22 @@ function Steps({ items }: { items: ReactNode[] }) {
 }
 
 function Tip({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">💡 {children}</p>;
+  return (
+    <p className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-amber-900">
+      <Lightbulb className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
+  );
 }
+
+/** Small inline icon, the same set as the sidebar. */
+const I = ({ icon: Icon }: { icon: typeof Bell }) => <Icon className="mx-0.5 inline size-3.5 -translate-y-px text-foreground" aria-hidden />;
+
+const Dot = ({ color }: { color: string }) => <span className={`mr-1 inline-block size-2 rounded-full align-middle ${color}`} aria-hidden />;
+
+const Level = ({ code, color }: { code: string; color: string }) => (
+  <span className={`mr-1.5 inline-block rounded px-1.5 text-xs font-semibold ring-1 ${color}`}>{code}</span>
+);
 
 const Kbd = ({ children }: { children: ReactNode }) => (
   <kbd className="rounded border border-border bg-zinc-50 px-1.5 py-0.5 font-mono text-[11px]">{children}</kbd>
@@ -77,35 +92,39 @@ export default function GuidePage() {
         <Section id="start" title="เริ่มต้น">
           <Steps
             items={[
-              "SUPER_ADMIN สร้างบัญชีให้ที่เมนูแอดมิน แล้วส่งรหัสชั่วคราวให้",
-              "เข้าครั้งแรก ระบบให้ตั้งรหัสผ่านใหม่ และตั้ง 2FA ด้วยแอป Authenticator (เก็บ recovery codes ไว้ให้ดี)",
+              "เข้าครั้งแรกด้วยรหัสชั่วคราวที่ได้รับ ระบบจะให้ตั้งรหัสผ่านใหม่",
+              "ตั้ง 2FA ด้วยแอป Authenticator และเก็บ recovery codes ไว้ให้ดี",
               "ครั้งต่อไป login ด้วยรหัสผ่าน + รหัส 6 หลักจากแอป",
             ]}
           />
           <p>
-            เมนูด้านซ้าย: 🔔 แจ้งเตือน · 🔍 ค้นหา (<Kbd>⌘K</Kbd>) · กล่องข้อความ · Tickets · Dashboard · แชร์ QR · Settings · คู่มือ · แอดมิน
-            (เฉพาะ SUPER_ADMIN)
+            เมนูด้านซ้าย: <I icon={Bell} /> แจ้งเตือน · <I icon={Search} /> ค้นหา (<Kbd>⌘K</Kbd>) · กล่องข้อความ · Tickets · Dashboard · แชร์ QR ·
+            Settings · คู่มือ
           </p>
           <Tip>งานที่กระทบภายนอก เช่น ให้สิทธิ์ลูกค้า สร้างลิงก์เชิญ จัดการแอดมิน จะขอรหัส 2FA ซ้ำ (มีผล 5 นาที)</Tip>
         </Section>
 
         <Section id="chat" title="แชท">
           <p>
-            แต่ละห้องมีสถานะ <b>🔵 เปิด</b> (ยังไม่มีคนรับ) · <b>🟡 กำลังตอบ</b> (มีชื่อคนรับ) · <b>⚪ ปิด</b> ลูกค้าทักมาใหม่ ห้องที่ปิดจะเปิดเอง
+            แต่ละห้องมีสถานะ <Dot color="bg-sky-500" />
+            <b>เปิด</b> (ยังไม่มีคนรับ) · <Dot color="bg-amber-500" />
+            <b>กำลังตอบ</b> (มีชื่อคนรับ) · <Dot color="bg-zinc-400" />
+            <b>ปิด</b> ลูกค้าทักมาใหม่ ห้องที่ปิดจะเปิดเอง
           </p>
           <Steps
             items={[
               <>กด <b>รับแชท</b> ที่หัวแชท (หรือแค่ตอบ ระบบรับให้อัตโนมัติ)</>,
               <><b>โอน</b> ให้เพื่อนในทีม หรือ <b>ปิดแชท</b> เมื่อคุยจบ</>,
-              <>พิมพ์ <Kbd>/</Kbd> หรือกด ⚡ เพื่อใช้ข้อความสำเร็จรูป ใส่ {"{name}"} {"{agent}"} ได้</>,
+              <>พิมพ์ <Kbd>/</Kbd> หรือกด <I icon={Zap} /> เพื่อใช้ข้อความสำเร็จรูป ใส่ {"{name}"} {"{agent}"} ได้</>,
               <>รูป วิดีโอ เสียง ไฟล์ และตำแหน่งที่ลูกค้าส่ง เปิดดูได้ในแชท</>,
             ]}
           />
           <p>
-            <b>ปักหมุด</b> (ไอคอนหมุดบนหัวแชท): 📌 ของฉัน เห็นคนเดียว · 📍 ทั้งทีม ทุกคนเห็น แชทที่ปักอยู่บนสุด และมีแท็บ &quot;ปักหมุด&quot;
+            <b>ปักหมุด</b> (<I icon={Pin} /> บนหัวแชท): <b>ของฉัน</b> เห็นคนเดียว · <b>ทั้งทีม</b> ทุกคนเห็น แชทที่ปักอยู่บนสุด และมีแท็บ
+            &quot;ปักหมุด&quot;
           </p>
           <p>
-            <b>ชื่อที่ทีมใช้ / remark</b> แก้ที่แผงขวา (ไอคอน ⓘ) ทั้งทีมเห็นเหมือนกัน ชื่อ LINE จริงยังแสดงกำกับเสมอ และค้นหาจากชื่อที่ตั้งได้
+            <b>ชื่อที่ทีมใช้ / remark</b> แก้ที่แผงขวา (<I icon={Info} />) ทั้งทีมเห็นเหมือนกัน ชื่อ LINE จริงยังแสดงกำกับเสมอ และค้นหาจากชื่อที่ตั้งได้
           </p>
           <Tip>ถ้ามีคนอื่นกำลังตอบแชทนั้นอยู่ จะมีแถบสีเหลืองเตือนก่อนตอบแทรก</Tip>
         </Section>
@@ -153,18 +172,20 @@ export default function GuidePage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  ["🔴 P1 วิกฤต", "ใช้ไม่ได้ทั้งระบบ / กระทบเงินหรือข้อมูล", "15 นาที", "4 ชม."],
-                  ["🟠 P2 สูง", "ฟีเจอร์หลักใช้ไม่ได้ ไม่มีทางเลี่ยง", "1 ชม.", "8 ชม."],
-                  ["🟡 P3 ปานกลาง", "ผิดปกติ แต่มีทางเลี่ยง", "4 ชม.", "3 วัน"],
-                  ["🟢 P4 ต่ำ", "ไม่กระทบการใช้งาน", "1 วัน", "7 วัน"],
-                  ["🔵 P5 คำถาม", "ถาม / ขอฟีเจอร์", "2 วัน", "วางแผนให้"],
-                ].map((row) => (
-                  <tr key={row[0]}>
-                    {row.map((cell, i) => (
-                      <td key={i} className="py-2 pr-3">
-                        {cell}
-                      </td>
-                    ))}
+                  ["P1", "วิกฤต", "bg-red-50 text-red-700 ring-red-200", "ใช้ไม่ได้ทั้งระบบ / กระทบเงินหรือข้อมูล", "15 นาที", "4 ชม."],
+                  ["P2", "สูง", "bg-orange-50 text-orange-700 ring-orange-200", "ฟีเจอร์หลักใช้ไม่ได้ ไม่มีทางเลี่ยง", "1 ชม.", "8 ชม."],
+                  ["P3", "ปานกลาง", "bg-yellow-50 text-yellow-800 ring-yellow-200", "ผิดปกติ แต่มีทางเลี่ยง", "4 ชม.", "3 วัน"],
+                  ["P4", "ต่ำ", "bg-emerald-50 text-emerald-700 ring-emerald-200", "ไม่กระทบการใช้งาน", "1 วัน", "7 วัน"],
+                  ["P5", "คำถาม", "bg-blue-50 text-blue-700 ring-blue-200", "ถาม / ขอฟีเจอร์", "2 วัน", "วางแผนให้"],
+                ].map(([code, name, color, when, reply, fix]) => (
+                  <tr key={code}>
+                    <td className="py-2 pr-3">
+                      <Level code={code} color={color} />
+                      {name}
+                    </td>
+                    <td className="py-2 pr-3">{when}</td>
+                    <td className="py-2 pr-3">{reply}</td>
+                    <td className="py-2 pr-3">{fix}</td>
                   </tr>
                 ))}
               </tbody>
@@ -175,14 +196,15 @@ export default function GuidePage() {
 
         <Section id="reopen" title="ลูกค้าตีกลับ (ยังไม่หาย)">
           <p>
-            เมื่อลูกค้ากด &quot;ยังไม่หาย&quot; ticket กลับเป็น <b>กำลังแก้ไข</b> มีป้าย <b>↩ ตีกลับ</b> และแถบแดงบนหน้า ticket น้องติ๊กจะถามลูกค้าว่ายังเจออะไร
+            เมื่อลูกค้ากด &quot;ยังไม่หาย&quot; ticket กลับเป็น <b>กำลังแก้ไข</b> มีป้าย <b>ตีกลับ</b> และแถบแดงบนหน้า ticket น้องติ๊กจะถามลูกค้าว่ายังเจออะไร
             คำตอบจะเข้า ticket ทันที ดูรวมได้ที่แท็บ &quot;ตีกลับ&quot;
           </p>
         </Section>
 
         <Section id="notify" title="การแจ้งเตือน">
           <p>
-            🔔 ที่ sidebar มีตัวเลขเรื่องใหม่ ป๊อปอัปมุมขวาล่างพร้อมเสียง และเลขบน title แท็บ เปิด &quot;แจ้งเตือนของเครื่อง&quot; ได้ที่ ⚙ ในกล่องแจ้งเตือน
+            <I icon={Bell} /> ที่ sidebar มีตัวเลขเรื่องใหม่ ป๊อปอัปมุมขวาล่างพร้อมเสียง และเลขบน title แท็บ เปิด &quot;แจ้งเตือนของเครื่อง&quot; ได้ที่{" "}
+            <I icon={Settings} /> ในกล่องแจ้งเตือน
             (เด้งตอนอยู่แท็บอื่น)
           </p>
           <p>แจ้งเรื่อง: ticket ใหม่ · ลูกค้าตีกลับ · ข้อความใหม่ในแชทที่ยังไม่มีคนรับ/ของฉัน · โอนแชทให้ · มอบหมาย ticket ให้ · ลูกค้าตอบ ticket ของฉัน</p>
@@ -191,8 +213,7 @@ export default function GuidePage() {
 
         <Section id="dashboard" title="Dashboard และ CSV">
           <p>
-            ดู ticket ใหม่ ค้างตามระดับ เกินกำหนด % ทัน SLA ความพอใจ โควตา push ของ LINE และกราฟรายวัน เลือกช่วง วันนี้ / 7 วัน / 30 วัน ตารางทีมเห็นเฉพาะ
-            SUPER_ADMIN
+            ดู ticket ใหม่ ค้างตามระดับ เกินกำหนด % ทัน SLA ความพอใจ โควตา push ของ LINE และกราฟรายวัน เลือกช่วง วันนี้ / 7 วัน / 30 วัน
           </p>
           <p>ดาวน์โหลด CSV ได้ที่ Dashboard และหน้า Tickets (ตามตัวกรอง) เปิดใน Excel แล้วภาษาไทยไม่เพี้ยน ทุกการ export ถูกบันทึกไว้</p>
         </Section>
@@ -204,7 +225,7 @@ export default function GuidePage() {
         <Section id="settings" title="Settings">
           <ul className="list-disc space-y-1 pl-5">
             <li>
-              <b>เวลาทำการ</b> (SUPER_ADMIN): นอกเวลา น้องติ๊กตอบอัตโนมัติชั่วโมงละครั้งต่อคน
+              <b>เวลาทำการ</b>: นอกเวลา น้องติ๊กตอบอัตโนมัติชั่วโมงละครั้งต่อคน
             </li>
             <li>
               <b>ลิงก์เชิญ</b>: สร้าง · ยกเลิก · อนุมัติ
@@ -224,7 +245,7 @@ export default function GuidePage() {
               ["ส่งข้อความไม่ได้ ขึ้นว่าโควตาหมด", "แพ็ก LINE OA ส่ง push ได้จำกัดต่อเดือน การตอบภายในเวลาสั้นหลังลูกค้าทักยังส่งได้ (ใช้ reply) ดูโควตาที่ Dashboard"],
               ["ลูกค้าไม่เห็นเมนูแจ้งปัญหา", "เช็กว่าให้สิทธิ์แล้ว แล้วกด \"สร้างใหม่และผูกให้ทุกคน\" ใน Settings ให้ลูกค้าปิด-เปิดห้องแชทใหม่"],
               ["ลูกค้าบล็อก OA", "ส่งข้อความหาไม่ได้ จะมีป้าย \"บล็อกแล้ว\" ในแชทและหน้า ticket"],
-              ["ลืม 2FA / ทำมือถือหาย", "ใช้ recovery code หรือให้ SUPER_ADMIN รีเซ็ต 2FA ให้"],
+              ["ลืม 2FA / ทำมือถือหาย", "ใช้ recovery code ที่เก็บไว้ หรือติดต่อผู้ดูแลระบบให้รีเซ็ต 2FA"],
             ].map(([q, a]) => (
               <div key={q}>
                 <dt className="font-medium text-foreground">{q}</dt>

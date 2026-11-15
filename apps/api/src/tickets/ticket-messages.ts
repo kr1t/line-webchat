@@ -96,15 +96,15 @@ export function severityPicker(formUrl: string | null = null): BotMessage[] {
     const picture = mascotUrl(severity.toLowerCase() as 'p1');
     return {
       type: 'bubble',
-      size: 'micro',
+      size: 'kilo',
       ...(picture
         ? {
             hero: {
               type: 'image' as const,
               url: picture,
               size: 'full',
-              aspectRatio: '1:1',
-              aspectMode: 'cover' as const,
+              aspectRatio: '20:13',
+              aspectMode: 'fit' as const,
               backgroundColor: MOOD_BG[severity],
             },
           }
@@ -115,14 +115,14 @@ export function severityPicker(formUrl: string | null = null): BotMessage[] {
         layout: 'vertical',
         spacing: 'sm',
         contents: [
-          { type: 'text', text: `${info.emoji} ${severity}`, size: 'xs', color: info.color, weight: 'bold' },
-          { type: 'text', text: info.label, size: 'md', weight: 'bold', color: INK, wrap: true },
-          { type: 'text', text: info.hint, size: 'xs', color: INK, wrap: true },
-          { type: 'text', text: info.examples, size: 'xxs', color: MUTED, wrap: true },
+          { type: 'text', text: `${info.emoji} ${severity}`, size: 'sm', color: info.color, weight: 'bold' },
+          { type: 'text', text: info.label, size: 'lg', weight: 'bold', color: INK, wrap: true },
+          { type: 'text', text: info.hint, size: 'sm', color: INK, wrap: true },
+          { type: 'text', text: info.examples, size: 'xs', color: MUTED, wrap: true },
           {
             type: 'text',
             text: `ตอบภายใน ${durationText(info.responseMinutes)}`,
-            size: 'xxs',
+            size: 'sm',
             color: info.color,
             weight: 'bold',
             margin: 'md',
@@ -179,9 +179,9 @@ function formBubble(formUrl: string): Bubble {
   const picture = mascotUrl('greet');
   return {
     type: 'bubble',
-    size: 'micro',
+    size: 'kilo',
     ...(picture
-      ? { hero: { type: 'image' as const, url: picture, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' as const, backgroundColor: '#FDECE9' } }
+      ? { hero: { type: 'image' as const, url: picture, size: 'full', aspectRatio: '20:13', aspectMode: 'fit' as const, backgroundColor: '#FDECE9' } }
       : {}),
     styles: { body: { backgroundColor: CREAM }, footer: { backgroundColor: CREAM } },
     body: {
@@ -189,10 +189,10 @@ function formBubble(formUrl: string): Bubble {
       layout: 'vertical',
       spacing: 'sm',
       contents: [
-        { type: 'text', text: 'แบบฟอร์ม', size: 'xs', color: RED, weight: 'bold' },
-        { type: 'text', text: 'กรอกทีเดียวจบ', size: 'md', weight: 'bold', color: INK, wrap: true },
-        { type: 'text', text: 'ใส่หัวข้อ รายละเอียด และแนบรูปได้ในหน้าเดียว', size: 'xs', color: INK, wrap: true },
-        { type: 'text', text: 'เลือกระดับในฟอร์มได้เลย', size: 'xxs', color: MUTED, wrap: true },
+        { type: 'text', text: 'แบบฟอร์ม', size: 'sm', color: RED, weight: 'bold' },
+        { type: 'text', text: 'กรอกทีเดียวจบ', size: 'lg', weight: 'bold', color: INK, wrap: true },
+        { type: 'text', text: 'ใส่หัวข้อ รายละเอียด และแนบรูปได้ในหน้าเดียว', size: 'sm', color: INK, wrap: true },
+        { type: 'text', text: 'เลือกระดับในฟอร์มได้เลย', size: 'xs', color: MUTED, wrap: true },
       ],
     },
     footer: {

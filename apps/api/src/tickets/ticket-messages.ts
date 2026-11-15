@@ -14,10 +14,17 @@ const MUTED = '#8A857C';
  */
 let mascotBase: string | null = null;
 let helpUrl: string | null = null;
-export function setMascotBase(webOrigin: string) {
+export function setMascotBase(webOrigin: string, liffId?: string) {
   const origin = webOrigin.replace(/\/$/, '');
   mascotBase = origin.startsWith('https://') ? `${origin}/brand/mascot` : null;
-  helpUrl = origin.startsWith('https://') ? `${origin}/help` : null;
+  helpUrl = guideUrl(origin, liffId);
+}
+
+/** The customer guide opens inside LINE through LIFF when there is one, otherwise as a web page. */
+export function guideUrl(webOrigin: string, liffId?: string): string | null {
+  if (liffId) return `https://liff.line.me/${liffId}/help`;
+  const origin = webOrigin.replace(/\/$/, '');
+  return origin.startsWith('https://') ? `${origin}/help` : null;
 }
 export const mascotUrl = (name: 'greet' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5') => (mascotBase ? `${mascotBase}/${name}.png` : null);
 
@@ -82,7 +89,8 @@ const thaiTime = new Intl.DateTimeFormat('th-TH', {
 
 // ── Reporting a problem ───────────────────────────────────────────────
 
-export function severityPicker(): BotMessage[] {
+/** formUrl: the LIFF form, offered next to the chat flow when there is a LIFF app. */
+export function severityPicker(formUrl: string | null = null): BotMessage[] {
   const bubbles: Bubble[] = SEVERITIES.map((severity) => {
     const info = SLA[severity];
     const picture = mascotUrl(severity.toLowerCase() as 'p1');
@@ -132,10 +140,22 @@ export function severityPicker(): BotMessage[] {
             color: severity === 'P1' ? RED : INK,
             action: postback('เลือก', `a=sev&v=${severity}`, severityName(severity)),
           },
+          ...(formUrl
+            ? [
+                {
+                  type: 'button' as const,
+                  style: 'link' as const,
+                  height: 'sm' as const,
+                  color: INK,
+                  action: { type: 'uri' as const, label: 'กรอกเป็นฟอร์ม', uri: `${formUrl}?severity=${severity}` },
+                },
+              ]
+            : []),
         ],
       },
     };
   });
+  if (formUrl) bubbles.push(formBubble(formUrl));
 
   const flex: Flex = {
     type: 'flex',
@@ -144,9 +164,43 @@ export function severityPicker(): BotMessage[] {
     quickReply: quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')),
   };
   return [
-    text('น้องติ๊กพร้อมช่วยครับ ปัญหารุนแรงแค่ไหนครับ? เลื่อนดูแล้วเลือกระดับได้เลย (เรียงจากมากไปน้อย)', 'ถามระดับความรุนแรง'),
+    text(
+      formUrl
+        ? 'น้องติ๊กพร้อมช่วยครับ ปัญหารุนแรงแค่ไหนครับ? เลื่อนดูแล้วเลือกระดับได้เลย (เรียงจากมากไปน้อย) หรือจะกรอกเป็นฟอร์มทีเดียวก็ได้ครับ'
+        : 'น้องติ๊กพร้อมช่วยครับ ปัญหารุนแรงแค่ไหนครับ? เลื่อนดูแล้วเลือกระดับได้เลย (เรียงจากมากไปน้อย)',
+      'ถามระดับความรุนแรง',
+    ),
     { message: flex, summary: '[การ์ดเลือกระดับ P1–P5]' },
   ];
+}
+
+/** Last card of the picker: fill everything in one form (title, details, pictures) instead of chatting. */
+function formBubble(formUrl: string): Bubble {
+  const picture = mascotUrl('greet');
+  return {
+    type: 'bubble',
+    size: 'micro',
+    ...(picture
+      ? { hero: { type: 'image' as const, url: picture, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' as const, backgroundColor: '#FDECE9' } }
+      : {}),
+    styles: { body: { backgroundColor: CREAM }, footer: { backgroundColor: CREAM } },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        { type: 'text', text: 'แบบฟอร์ม', size: 'xs', color: RED, weight: 'bold' },
+        { type: 'text', text: 'กรอกทีเดียวจบ', size: 'md', weight: 'bold', color: INK, wrap: true },
+        { type: 'text', text: 'ใส่หัวข้อ รายละเอียด และแนบรูปได้ในหน้าเดียว', size: 'xs', color: INK, wrap: true },
+        { type: 'text', text: 'เลือกระดับในฟอร์มได้เลย', size: 'xxs', color: MUTED, wrap: true },
+      ],
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [{ type: 'button', style: 'primary', height: 'sm', color: RED, action: { type: 'uri', label: 'เปิดฟอร์ม', uri: formUrl } }],
+    },
+  };
 }
 
 export function confirmCritical(): BotMessage {

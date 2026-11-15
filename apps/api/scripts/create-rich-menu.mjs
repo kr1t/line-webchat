@@ -20,6 +20,11 @@ const area = (x, width, data, label) => ({
   action: { type: 'postback', data, displayText: label, label },
 });
 
+// The guide opens inside LINE through LIFF when LIFF_ID is set
+const helpUrl = process.env.LIFF_ID
+  ? `https://liff.line.me/${process.env.LIFF_ID}/help`
+  : `${(process.env.WEB_ORIGIN ?? '').replace(/\/$/, '')}/help`;
+
 const menu = {
   size: { width: 2500, height: 843 },
   selected: true,
@@ -30,7 +35,7 @@ const menu = {
     area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
     area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
     area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
-    { bounds: { x: MASCOT + BUTTON * 3, y: 0, width: BUTTON, height: 843 }, action: { type: 'uri', label: 'คู่มือ', uri: `${(process.env.WEB_ORIGIN ?? '').replace(/\/$/, '')}/help` } },
+    { bounds: { x: MASCOT + BUTTON * 3, y: 0, width: BUTTON, height: 843 }, action: { type: 'uri', label: 'คู่มือ', uri: helpUrl } },
   ],
 };
 

@@ -34,7 +34,7 @@ export class BotMessengerService {
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
     config: ConfigService<Env, true>,
   ) {
-    setMascotBase(config.get('WEB_ORIGIN', { infer: true }));
+    setMascotBase(config.get('WEB_ORIGIN', { infer: true }), config.get('LIFF_ID', { infer: true }));
     const icon = mascotUrl('greet');
     this.sender = icon ? { name: BOT_NAME, iconUrl: icon } : { name: BOT_NAME };
   }

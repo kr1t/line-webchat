@@ -1,7 +1,7 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../src/db/database.module.js';
-import { type Admin, lineUsers, roleInvites, ticketMessages, tickets } from '../src/db/schema.js';
+import { type Admin, chatStates, lineUsers, roleInvites, ticketMessages, tickets } from '../src/db/schema.js';
 import {
   authedInject,
   createAdmin,
@@ -9,6 +9,8 @@ import {
   createTestApp,
   fakeIdTokens,
   type LineClientMock,
+  lineEvents,
+  postWebhook,
   resetDatabase,
   sessionCookie,
   WEB_ORIGIN,
@@ -209,6 +211,19 @@ describe('LIFF pages and invite links (e2e)', () => {
 
       const list = await alice('GET', '/liff/tickets');
       expect(list.json()).toMatchObject({ active: [], closed: [expect.objectContaining({ id })] });
+    });
+
+    it('offers the form next to the chat flow, and the form takes over a half-finished chat report', async () => {
+      await postWebhook(app, [lineEvents(ALICE).postback('a=report')]);
+      const sent = JSON.stringify(line.replyMessage.mock.calls.at(-1));
+      expect(sent).toContain(`https://liff.line.me/${LIFF_ID}/new`);
+      expect(sent).toContain(`https://liff.line.me/${LIFF_ID}/new?severity=P3`);
+      expect(await db.select().from(chatStates)).toHaveLength(1);
+
+      const alice = await liff(ALICE);
+      const created = await alice('POST', '/liff/tickets', { severity: 'P3', category: 'other', title: 'ค้นหาไม่เจอ', description: 'พิมพ์ชื่อสินค้าแล้วไม่ขึ้น' });
+      expect(created.statusCode).toBe(201);
+      expect(await db.select().from(chatStates)).toHaveLength(0);
     });
 
     it('hides other people’s tickets', async () => {

@@ -96,7 +96,7 @@ export class CustomerFlowService {
     switch (action) {
       case 'report':
         await this.setState(userId, { step: 'choose_severity' });
-        return reply(say.severityPicker());
+        return reply(say.severityPicker(this.liffId ? `https://liff.line.me/${this.liffId}/new` : null));
 
       case 'sev': {
         const severity = params.get('v');

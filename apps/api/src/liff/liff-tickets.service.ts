@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { DB, type Database } from '../db/database.module.js';
-import { admins, lineUsers, type Ticket, ticketEvents, ticketMessages, tickets } from '../db/schema.js';
+import { admins, chatStates, lineUsers, type Ticket, ticketEvents, ticketMessages, tickets } from '../db/schema.js';
 import { ACTIVE_STATUSES, durationText, SLA, ticketCode } from '../tickets/sla.js';
 import { TicketsService } from '../tickets/tickets.service.js';
 import { AttachmentsService } from '../tickets/attachments.service.js';
@@ -87,6 +87,10 @@ export class LiffTicketsService {
   async create(userId: string, body: CreateTicketBody) {
     await this.assertCustomer(userId);
     const ticket = await this.tickets.create({ reporterId: userId, ...body });
+    // Switched from the chat flow to the form: drop the half-finished chat report
+    await this.db
+      .delete(chatStates)
+      .where(and(eq(chatStates.userId, userId), inArray(chatStates.step, ['choose_severity', 'confirm_severity', 'await_description'])));
     return summary(ticket);
   }
 

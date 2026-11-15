@@ -1,0 +1,191 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import useSWR from "swr";
+import clsx from "clsx";
+import { Check, Copy, Link2 } from "lucide-react";
+import { useStepUp } from "@/components/admins/step-up";
+import { buttonClass, FormError } from "@/components/auth/auth-card";
+import { Dialog } from "@/components/ui/dialog";
+import { fetcher, post, RequestError } from "@/lib/fetcher";
+import { displayName, formatFullDate, formatTime } from "@/lib/format";
+import type { RoleInvite } from "@/lib/types";
+
+const STATUS: Record<RoleInvite["status"], { label: string; className: string }> = {
+  unused: { label: "ยังไม่ถูกใช้", className: "bg-sky-50 text-sky-700" },
+  pending_approval: { label: "รออนุมัติ", className: "bg-amber-50 text-amber-800" },
+  granted: { label: "ได้สิทธิ์แล้ว", className: "bg-emerald-50 text-emerald-700" },
+  expired: { label: "หมดอายุ", className: "bg-zinc-100 text-muted" },
+  revoked: { label: "ยกเลิกแล้ว", className: "bg-zinc-100 text-muted" },
+};
+
+const isCancelled = (err: unknown) => err instanceof RequestError && err.code === "step_up_cancelled";
+
+export function InvitesSection() {
+  const { data: invites = [], mutate } = useSWR<RoleInvite[]>("/role-invites", fetcher, { refreshInterval: 15_000 });
+  const withStepUp = useStepUp();
+  const [creating, setCreating] = useState(false);
+
+  const approve = async (id: string) => {
+    try {
+      await withStepUp(() => post(`/role-invites/${id}/approve`));
+    } catch (err) {
+      if (!isCancelled(err)) window.alert("อนุมัติไม่สำเร็จ");
+    }
+    void mutate();
+  };
+  const revoke = async (id: string) => {
+    if (!window.confirm("ยกเลิกลิงก์นี้? คนที่ได้ลิงก์ไปจะใช้ไม่ได้อีก")) return;
+    await post(`/role-invites/${id}/revoke`).catch(() => undefined);
+    void mutate();
+  };
+
+  return (
+    <section className="rounded-2xl border border-border bg-surface p-5">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-semibold">ลิงก์เชิญลูกค้า</h2>
+          <p className="text-sm text-muted">ลิงก์ใช้ได้ครั้งเดียว มีวันหมดอายุ ยกเลิกได้ ถ้าไม่ระบุคนรับ ต้องอนุมัติหลังลูกค้าเปิดลิงก์</p>
+        </div>
+        <button onClick={() => setCreating(true)} className="flex shrink-0 items-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-sm font-medium text-white">
+          <Link2 className="size-4" /> สร้างลิงก์
+        </button>
+      </div>
+      {invites.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">ยังไม่มีลิงก์เชิญ</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {invites.map((inv) => (
+            <li key={inv.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
+              <span className={clsx("rounded-full px-2 py-0.5 text-xs font-medium", STATUS[inv.status].className)}>{STATUS[inv.status].label}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate">
+                  {inv.targetUserId ? `สำหรับ ${displayName(inv.targetName)}` : "ใครเปิดก็ได้ (ต้องอนุมัติ)"}
+                  {inv.usedByUserId && <span className="text-muted"> · ใช้โดย {displayName(inv.usedByName)}</span>}
+                </p>
+                <p className="text-xs text-muted" suppressHydrationWarning>
+                  สร้างโดย {inv.createdByName ?? "-"} · หมดอายุ {formatFullDate(inv.expiresAt)} {formatTime(inv.expiresAt)}
+                </p>
+              </div>
+              {inv.status === "pending_approval" && (
+                <button onClick={() => approve(inv.id)} className="rounded-lg bg-foreground px-2.5 py-1 text-xs font-medium text-white">
+                  อนุมัติ
+                </button>
+              )}
+              {(inv.status === "unused" || inv.status === "pending_approval") && (
+                <button onClick={() => revoke(inv.id)} className="rounded-lg px-2.5 py-1 text-xs text-red-600 ring-1 ring-red-200 hover:bg-red-50">
+                  ยกเลิก
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <CreateInviteDialog open={creating} onClose={() => setCreating(false)} onCreated={() => void mutate()} />
+    </section>
+  );
+}
+
+/** Also used from the chat side panel, where the invite is locked to that customer. */
+export function CreateInviteDialog({
+  open,
+  onClose,
+  onCreated,
+  target,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: () => void;
+  target?: { userId: string; name: string | null };
+}) {
+  const withStepUp = useStepUp();
+  const [hours, setHours] = useState(24);
+  const [requireApproval, setRequireApproval] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const close = () => {
+    setUrl(null);
+    setCopied(false);
+    setError(null);
+    onClose();
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await withStepUp(() =>
+        post<{ url: string }>("/role-invites", {
+          targetUserId: target?.userId ?? null,
+          expiresInHours: hours,
+          requireApproval: target ? requireApproval : true,
+        }),
+      );
+      setUrl(created.url);
+      onCreated?.();
+    } catch (err) {
+      if (!isCancelled(err)) setError("สร้างลิงก์ไม่สำเร็จ");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={close} title={target ? `ลิงก์เชิญสำหรับ ${displayName(target.name)}` : "สร้างลิงก์เชิญ"}>
+      {url ? (
+        <div className="space-y-3">
+          <p className="text-sm text-muted">คัดลอกตอนนี้เลย ลิงก์จะแสดงแค่ครั้งนี้ครั้งเดียว ระบบไม่ได้เก็บไว้</p>
+          <div className="break-all rounded-xl bg-zinc-100 p-3 font-mono text-xs">{url}</div>
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+            }}
+            className={buttonClass}
+          >
+            {copied ? (
+              <>
+                <Check className="mr-1 inline size-4" /> คัดลอกแล้ว
+              </>
+            ) : (
+              <>
+                <Copy className="mr-1 inline size-4" /> คัดลอกลิงก์
+              </>
+            )}
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4 text-sm">
+          {!target && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              ลิงก์ที่ไม่ได้ระบุคนรับ ใครได้ไปก็เปิดได้ จึงต้องมีแอดมินกดอนุมัติหลังลูกค้าเปิดลิงก์ทุกครั้ง
+            </p>
+          )}
+          <label className="block">
+            <span className="mb-1 block font-medium">หมดอายุใน</span>
+            <select value={hours} onChange={(e) => setHours(Number(e.target.value))} className="w-full rounded-xl border border-border bg-surface px-3 py-2">
+              <option value={1}>1 ชั่วโมง</option>
+              <option value={24}>24 ชั่วโมง</option>
+              <option value={72}>3 วัน</option>
+              <option value={168}>7 วัน</option>
+            </select>
+          </label>
+          {target && (
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={requireApproval} onChange={(e) => setRequireApproval(e.target.checked)} className="size-4 accent-foreground" />
+              ต้องอนุมัติอีกครั้งหลังลูกค้าเปิดลิงก์
+            </label>
+          )}
+          <FormError message={error} />
+          <button type="submit" disabled={saving} className={buttonClass}>
+            {saving ? "กำลังสร้าง…" : "สร้างลิงก์"}
+          </button>
+        </form>
+      )}
+    </Dialog>
+  );
+}

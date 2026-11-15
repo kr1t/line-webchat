@@ -3,8 +3,9 @@ import { ConflictException, Inject, Injectable, Logger, NotFoundException } from
 import { HTTPFetchError, messagingApi } from '@line/bot-sdk';
 import { and, eq, sql } from 'drizzle-orm';
 import { DB, type Database } from '../db/database.module.js';
-import { admins, lineUsers, messages } from '../db/schema.js';
+import { type Admin, admins, lineUsers, messages } from '../db/schema.js';
 import { LINE_MESSAGING_CLIENT } from '../line/line.constants.js';
+import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 import { messageColumns } from './inbox.service.js';
 
 type SendResult = { delivery: 'reply' | 'push'; error: null } | { delivery: null; error: string };
@@ -26,14 +27,17 @@ export class ReplyService {
   constructor(
     @Inject(DB) private readonly db: Database,
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
+    private readonly status: ConversationStatusService,
   ) {}
 
   /**
    * Stores the message first, then delivers it: a free reply (when a fresh reply token exists)
    * or a push message. Failures are kept on the message so the admin can retry.
    */
-  async send(userId: string, text: string, adminId: string) {
+  async send(userId: string, text: string, admin: Admin) {
+    const adminId = admin.id;
     await this.assertCanMessage(userId);
+    await this.status.claimOnReply(userId, admin);
 
     const [message] = await this.db
       .insert(messages)
@@ -69,13 +73,21 @@ export class ReplyService {
 
   async retry(userId: string, messageId: string) {
     const [message] = await this.db
-      .select({ id: messages.id, text: messages.text, status: messages.status, retryKey: messages.retryKey })
+      .select({
+        id: messages.id,
+        text: messages.text,
+        status: messages.status,
+        retryKey: messages.retryKey,
+        payload: messages.payload,
+      })
       .from(messages)
       .where(and(eq(messages.id, messageId), eq(messages.userId, userId), eq(messages.direction, 'out')))
       .limit(1);
 
     if (!message) throw new NotFoundException();
     if (message.status !== 'failed') throw new ConflictException({ code: 'not_failed' });
+    // Automatic cards are stored as a summary only; resending would deliver the summary text
+    if (message.payload && (message.payload as { bot?: boolean }).bot) throw new ConflictException({ code: 'not_retryable' });
     await this.assertCanMessage(userId);
 
     // The same retry key lets LINE drop the push if an earlier attempt actually went through

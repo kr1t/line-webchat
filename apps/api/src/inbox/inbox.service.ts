@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gt, ilike, inArray, lt, min, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { DB, type Database } from '../db/database.module.js';
 import { admins, lineUsers, messages } from '../db/schema.js';
 import type { ListConversationsQuery, ListMessagesQuery } from './inbox.schemas.js';
@@ -17,6 +18,8 @@ export const messageColumns = {
   createdAt: messages.createdAt,
 };
 
+const assigned = alias(admins, 'assigned');
+
 const userColumns = {
   userId: lineUsers.userId,
   displayName: lineUsers.displayName,
@@ -24,6 +27,10 @@ const userColumns = {
   isFollowing: lineUsers.isFollowing,
   unreadCount: lineUsers.unreadCount,
   lastMessageAt: lineUsers.lastMessageAt,
+  role: lineUsers.role,
+  status: lineUsers.status,
+  assignedAdminId: lineUsers.assignedAdminId,
+  assignedName: assigned.displayName,
 };
 
 const CONVERSATION_LIMIT = 200;
@@ -36,14 +43,21 @@ function escapeLike(value: string) {
 export class InboxService {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async listConversations(query: ListConversationsQuery) {
+  async listConversations(query: ListConversationsQuery, adminId: string) {
     const conditions: SQL[] = [];
     if (query.q) conditions.push(ilike(lineUsers.displayName, `%${escapeLike(query.q)}%`));
     if (query.filter === 'unread') conditions.push(gt(lineUsers.unreadCount, 0));
+    if (query.filter === 'open' || query.filter === 'handling' || query.filter === 'closed') {
+      conditions.push(eq(lineUsers.status, query.filter));
+    }
+    if (query.filter === 'mine') {
+      conditions.push(eq(lineUsers.status, 'handling'), eq(lineUsers.assignedAdminId, adminId));
+    }
 
     const users = await this.db
       .select(userColumns)
       .from(lineUsers)
+      .leftJoin(assigned, eq(assigned.id, lineUsers.assignedAdminId))
       .where(and(...conditions))
       .orderBy(sql`${lineUsers.lastMessageAt} desc nulls last`, asc(lineUsers.userId))
       .limit(CONVERSATION_LIMIT);
@@ -66,14 +80,29 @@ export class InboxService {
     return users.map((user) => ({ ...user, lastMessage: byUser.get(user.userId) ?? null }));
   }
 
+  /** Numbers for the list tabs. */
+  async counts(adminId: string) {
+    const [row] = await this.db
+      .select({
+        open: sql<number>`count(*) filter (where ${lineUsers.status} = 'open')`.mapWith(Number),
+        mine: sql<number>`count(*) filter (where ${lineUsers.status} = 'handling' and ${lineUsers.assignedAdminId} = ${adminId})`.mapWith(Number),
+        handling: sql<number>`count(*) filter (where ${lineUsers.status} = 'handling')`.mapWith(Number),
+        unread: sql<number>`count(*) filter (where ${lineUsers.unreadCount} > 0)`.mapWith(Number),
+      })
+      .from(lineUsers);
+    return row;
+  }
+
   async getConversation(userId: string) {
     const [user] = await this.db
       .select({
         ...userColumns,
         statusMessage: lineUsers.statusMessage,
+        roleGrantedAt: lineUsers.roleGrantedAt,
         createdAt: lineUsers.createdAt,
       })
       .from(lineUsers)
+      .leftJoin(assigned, eq(assigned.id, lineUsers.assignedAdminId))
       .where(eq(lineUsers.userId, userId))
       .limit(1);
     if (!user) throw new NotFoundException();

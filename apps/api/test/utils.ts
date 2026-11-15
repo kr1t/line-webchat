@@ -9,11 +9,16 @@ import { TokenService } from '../src/auth/token.service.js';
 import { DB, type Database } from '../src/db/database.module.js';
 import { type Admin, admins } from '../src/db/schema.js';
 import { LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
+import { LINE_ID_TOKEN_VERIFIER, type LineIdentity } from '../src/liff/liff.constants.js';
 
 export interface LineClientMock {
   getProfile: ReturnType<typeof vi.fn>;
   replyMessage: ReturnType<typeof vi.fn>;
   pushMessage: ReturnType<typeof vi.fn>;
+  linkRichMenuIdToUser: ReturnType<typeof vi.fn>;
+  unlinkRichMenuIdFromUser: ReturnType<typeof vi.fn>;
+  getMessageQuota: ReturnType<typeof vi.fn>;
+  getMessageQuotaConsumption: ReturnType<typeof vi.fn>;
 }
 
 export function createLineClientMock(): LineClientMock {
@@ -26,13 +31,22 @@ export function createLineClientMock(): LineClientMock {
     })),
     replyMessage: vi.fn(async () => ({ sentMessages: [] })),
     pushMessage: vi.fn(async () => ({ sentMessages: [] })),
+    linkRichMenuIdToUser: vi.fn(async () => ({})),
+    unlinkRichMenuIdFromUser: vi.fn(async () => ({})),
+    getMessageQuota: vi.fn(async () => ({ type: 'limited', value: 200 })),
+    getMessageQuotaConsumption: vi.fn(async () => ({ totalUsage: 20 })),
   };
 }
+
+/** ID tokens the fake LINE verify endpoint accepts, keyed by token. */
+export const fakeIdTokens = new Map<string, LineIdentity>();
 
 export async function createTestApp(line: LineClientMock) {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LINE_MESSAGING_CLIENT)
     .useValue(line)
+    .overrideProvider(LINE_ID_TOKEN_VERIFIER)
+    .useValue(async (token: string) => fakeIdTokens.get(token) ?? null)
     .compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter(), { rawBody: true });
@@ -44,7 +58,9 @@ export async function createTestApp(line: LineClientMock) {
 }
 
 export async function resetDatabase(db: Database) {
-  await db.execute(sql`truncate table messages, line_users restart identity cascade`);
+  await db.execute(
+    sql`truncate table messages, line_users, tickets, role_invites, canned_responses, settings, login_attempts restart identity cascade`,
+  );
 }
 
 export function sign(body: string, secret = process.env.LINE_CHANNEL_SECRET!) {
@@ -70,9 +86,10 @@ export async function createAdmin(db: Database, overrides: Partial<typeof admins
   return { admin, password };
 }
 
-export async function sessionCookie(app: NestFastifyApplication, admin: Admin) {
-  const token = await app.get(TokenService).sign('session', admin);
-  return `lc_session=${token}`;
+export async function sessionCookie(app: NestFastifyApplication, admin: Admin, { stepUp = false } = {}) {
+  const tokens = app.get(TokenService);
+  const session = `lc_session=${await tokens.sign('session', admin)}`;
+  return stepUp ? `${session}; lc_sudo=${await tokens.sign('step-up', admin)}` : session;
 }
 
 type InjectOptions = Parameters<NestFastifyApplication['inject']>[0] & object;
@@ -84,4 +101,49 @@ export function authedInject(app: NestFastifyApplication, cookie: string) {
       ...options,
       headers: { cookie, origin: WEB_ORIGIN, ...(options as { headers?: Record<string, string> }).headers },
     } as InjectOptions);
+}
+
+let eventSeq = 0;
+
+/** Builds LINE webhook events for one user; each gets unique ids like real deliveries. */
+export function lineEvents(userId: string) {
+  const base = () => {
+    eventSeq += 1;
+    return {
+      mode: 'active',
+      timestamp: Date.now(),
+      webhookEventId: `evt-${process.pid}-${eventSeq}`,
+      deliveryContext: { isRedelivery: false },
+      source: { type: 'user', userId },
+      replyToken: `reply-${eventSeq}`,
+    };
+  };
+  return {
+    text: (text: string) => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `msg-${process.pid}-${eventSeq}`, type: 'text', text, quoteToken: 'q' } };
+    },
+    sticker: () => {
+      const b = base();
+      return {
+        ...b,
+        type: 'message',
+        message: { id: `msg-${process.pid}-${eventSeq}`, type: 'sticker', packageId: '1', stickerId: '1', stickerResourceType: 'STATIC' },
+      };
+    },
+    postback: (data: string) => ({ ...base(), type: 'postback', postback: { data } }),
+  };
+}
+
+/** Posts events to the webhook with a valid signature. */
+export async function postWebhook(app: NestFastifyApplication, events: unknown[]) {
+  const payload = JSON.stringify({ destination: 'Ubot', events });
+  const res = await app.inject({
+    method: 'POST',
+    url: '/line/webhook',
+    headers: { 'content-type': 'application/json', 'x-line-signature': sign(payload) },
+    payload,
+  });
+  if (res.statusCode !== 200) throw new Error(`webhook returned ${res.statusCode}: ${res.body}`);
+  return res;
 }

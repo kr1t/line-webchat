@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import { CurrentAdmin } from '../auth/decorators.js';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req } from '@nestjs/common';
+import { type AuthedRequest, CurrentAdmin, RequireStepUp } from '../auth/decorators.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import type { Admin } from '../db/schema.js';
 import {
@@ -11,7 +11,13 @@ import {
   messageIdSchema,
   type SendMessageBody,
   sendMessageBody,
+  type RoleBody,
+  roleBody,
+  type TransferBody,
+  transferBody,
 } from './inbox.schemas.js';
+import { CustomerRoleService } from './customer-role.service.js';
+import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 import { InboxService } from './inbox.service.js';
 import { ReplyService } from './reply.service.js';
 
@@ -22,11 +28,19 @@ export class InboxController {
   constructor(
     private readonly inbox: InboxService,
     private readonly replies: ReplyService,
+    private readonly status: ConversationStatusService,
+    private readonly roles: CustomerRoleService,
   ) {}
 
   @Get()
-  list(@Query(new ZodValidationPipe(listConversationsQuery)) query: ListConversationsQuery) {
-    return this.inbox.listConversations(query);
+  list(@CurrentAdmin() admin: Admin, @Query(new ZodValidationPipe(listConversationsQuery)) query: ListConversationsQuery) {
+    return this.inbox.listConversations(query, admin.id);
+  }
+
+  // Declared before ':userId' so "counts" is not read as a user id
+  @Get('counts')
+  counts(@CurrentAdmin() admin: Admin) {
+    return this.inbox.counts(admin.id);
   }
 
   @Get(':userId')
@@ -48,7 +62,7 @@ export class InboxController {
     @Param('userId', UserIdPipe) userId: string,
     @Body(new ZodValidationPipe(sendMessageBody)) body: SendMessageBody,
   ) {
-    return this.replies.send(userId, body.text, admin.id);
+    return this.replies.send(userId, body.text, admin);
   }
 
   @Post(':userId/messages/:messageId/retry')
@@ -64,5 +78,44 @@ export class InboxController {
   @HttpCode(HttpStatus.NO_CONTENT)
   markAsRead(@Param('userId', UserIdPipe) userId: string) {
     return this.inbox.markAsRead(userId);
+  }
+
+  @Get(':userId/events')
+  events(@Param('userId', UserIdPipe) userId: string) {
+    return this.status.listEvents(userId);
+  }
+
+  @Post(':userId/claim')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  claim(@CurrentAdmin() admin: Admin, @Param('userId', UserIdPipe) userId: string) {
+    return this.status.claim(userId, admin);
+  }
+
+  @Post(':userId/transfer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  transfer(
+    @CurrentAdmin() admin: Admin,
+    @Param('userId', UserIdPipe) userId: string,
+    @Body(new ZodValidationPipe(transferBody)) body: TransferBody,
+  ) {
+    return this.status.transfer(userId, admin, body.adminId);
+  }
+
+  // Gives access outside the CMS, so it needs a fresh 2FA code like admin management
+  @RequireStepUp()
+  @Put(':userId/role')
+  setRole(
+    @CurrentAdmin() admin: Admin,
+    @Param('userId', UserIdPipe) userId: string,
+    @Body(new ZodValidationPipe(roleBody)) body: RoleBody,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.roles.setRole(userId, body.role, { adminId: admin.id, ip: req.ip, via: 'chat' });
+  }
+
+  @Post(':userId/close')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  close(@CurrentAdmin() admin: Admin, @Param('userId', UserIdPipe) userId: string) {
+    return this.status.close(userId, admin);
   }
 }

@@ -15,7 +15,14 @@ export type AuditAction =
   | 'admin.deactivated'
   | 'admin.activated'
   | 'admin.password_reset'
-  | 'admin.2fa_reset';
+  | 'admin.2fa_reset'
+  | 'customer.role_granted'
+  | 'customer.role_revoked'
+  | 'invite.created'
+  | 'invite.revoked'
+  | 'invite.approved'
+  | 'invite.redeemed'
+  | 'tickets.exported';
 
 @Injectable()
 export class AuditService {

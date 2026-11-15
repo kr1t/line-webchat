@@ -1,14 +1,10 @@
 import type { ReactNode } from "react";
+import { AdminLogo } from "@/components/admin-logo";
 
 export function AuthCard({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
     <div className="w-full max-w-sm">
-      <div className="mb-8 flex items-center gap-2">
-        <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground">
-          t
-        </span>
-        <span className="font-semibold">tickget</span>
-      </div>
+      <AdminLogo className="mb-8" />
       <h1 className="text-xl font-semibold">{title}</h1>
       {description && <p className="mt-1.5 text-sm text-muted">{description}</p>}
       <div className="mt-6">{children}</div>

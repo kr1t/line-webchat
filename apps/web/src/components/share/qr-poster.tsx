@@ -48,10 +48,12 @@ export const QrPoster = forwardRef<SVGSVGElement, { url: string; handle: string;
 ) {
   const qr = useMemo(() => QRCode.create(url, { errorCorrectionLevel: "H" }), [url]);
   const size = qr.modules.size;
-  const box = 560;
+  // Vertical rhythm: badge → title → QR → tagline → LINE pill, with the wordmark below the card
+  const box = 500;
   const cell = box / size;
   const qx = (POSTER_W - box) / 2;
-  const qy = 470;
+  const qy = 494;
+  const below = qy + box + 26; // bottom of the dotted frame
 
   const inFinder = (r: number, c: number) =>
     (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
@@ -91,7 +93,7 @@ export const QrPoster = forwardRef<SVGSVGElement, { url: string; handle: string;
     <rect width="${POSTER_W}" height="${POSTER_H}" fill="${CREAM}"/>
     ${confetti.map(([x, y, f]) => `<circle cx="${x}" cy="${y}" r="12" fill="${f}"/>`).join("")}
     ${stars.map((s) => { const [d, f] = s.split("|"); return `<path d="${d}" fill="${f}" stroke="${INK}" stroke-width="4"/>`; }).join("")}
-    <path d="${scallopPath(110, 300, 860, 980)}" fill="#FFFFFF" stroke="${INK}" stroke-width="10" stroke-linejoin="round"/>
+    <path d="${scallopPath(110, 300, 860, 935)}" fill="#FFFFFF" stroke="${INK}" stroke-width="10" stroke-linejoin="round"/>
     <circle cx="${POSTER_W / 2}" cy="250" r="130" fill="${PINK}" stroke="${INK}" stroke-width="10"/>
     <clipPath id="badge"><circle cx="${POSTER_W / 2}" cy="250" r="124"/></clipPath>
     <image href="${mascotSrc}" x="${POSTER_W / 2 - 150}" y="100" width="300" height="300" clip-path="url(#badge)"/>
@@ -99,17 +101,17 @@ export const QrPoster = forwardRef<SVGSVGElement, { url: string; handle: string;
       <path d="M 700 120 h 260 a 36 36 0 0 1 36 36 v 70 a 36 36 0 0 1 -36 36 h -190 l -46 40 v -40 h -24 a 36 36 0 0 1 -36 -36 v -70 a 36 36 0 0 1 36 -36 z" fill="${RED}" stroke="${INK}" stroke-width="7"/>
       <text x="830" y="205" font-size="44" font-weight="800" fill="#fff" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">แอดเพื่อนกัน!</text>
     </g>
-    <text x="${POSTER_W / 2}" y="430" font-size="50" font-weight="800" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">สแกนคุยกับน้องติ๊ก</text>
+    <text x="${POSTER_W / 2}" y="424" font-size="50" font-weight="800" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">สแกนคุยกับน้องติ๊ก</text>
     <rect x="${qx - 26}" y="${qy - 26}" width="${box + 52}" height="${box + 52}" rx="44" fill="${CREAM}" stroke="${INK}" stroke-width="6" stroke-dasharray="2 16" stroke-linecap="round"/>
     <g fill="${INK}">${dots.join("")}</g>
     ${finders.join("")}
     <rect x="${POSTER_W / 2 - logo / 2 - 8}" y="${qy + box / 2 - logo / 2 - 8}" width="${logo + 16}" height="${logo + 16}" rx="${logo / 4}" fill="#fff" stroke="${INK}" stroke-width="5"/>
     <clipPath id="logo"><rect x="${POSTER_W / 2 - logo / 2}" y="${qy + box / 2 - logo / 2}" width="${logo}" height="${logo}" rx="${logo / 5}"/></clipPath>
     <image href="${mascotSrc}" x="${POSTER_W / 2 - logo / 2}" y="${qy + box / 2 - logo / 2}" width="${logo}" height="${logo}" clip-path="url(#logo)"/>
-    <text x="${POSTER_W / 2}" y="1125" font-size="36" font-weight="600" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">แจ้งปัญหา · ติดตามงาน · คุยกับทีม ได้ในแชทเดียว</text>
-    <rect x="${POSTER_W / 2 - 190}" y="1160" width="380" height="76" rx="38" fill="#06C755" stroke="${INK}" stroke-width="6"/>
-    <text x="${POSTER_W / 2}" y="1211" font-size="38" font-weight="800" fill="#fff" text-anchor="middle" font-family="Inter, Arial, sans-serif">LINE ${handle}</text>
-    <text x="${POSTER_W / 2}" y="1318" font-size="40" font-weight="800" fill="${INK}" text-anchor="middle" font-family="Inter, Arial, sans-serif">t<tspan fill="${RED}">i</tspan>ckget</text>
+    <text x="${POSTER_W / 2}" y="${below + 62}" font-size="34" font-weight="600" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">แจ้งปัญหา · ติดตามงาน · คุยกับทีม</text>
+    <rect x="${POSTER_W / 2 - 200}" y="${below + 108}" width="400" height="80" rx="40" fill="#06C755" stroke="${INK}" stroke-width="6"/>
+    <text x="${POSTER_W / 2}" y="${below + 162}" font-size="38" font-weight="800" fill="#fff" text-anchor="middle" font-family="Inter, Arial, sans-serif">LINE ${handle}</text>
+    <text x="${POSTER_W / 2}" y="1310" font-size="48" font-weight="800" fill="${INK}" text-anchor="middle" letter-spacing="1" font-family="Inter, Arial, sans-serif">t<tspan fill="${RED}">i</tspan>ckget</text>
   `;
 
   return (

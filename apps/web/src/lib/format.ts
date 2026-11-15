@@ -40,10 +40,14 @@ const TYPE_LABELS: Record<string, string> = {
   audio: "ข้อความเสียง",
   file: "ไฟล์",
   location: "ตำแหน่ง",
+  flex: "การ์ด",
+  postback: "กดปุ่ม",
 };
 
 export function messagePreview(message: { type: string; text: string | null }): string {
   if (message.type === "text") return message.text ?? "";
+  // Bot cards and button presses already carry a readable summary
+  if ((message.type === "flex" || message.type === "postback") && message.text) return message.text;
   const label = TYPE_LABELS[message.type] ?? "ข้อความ";
   return message.text ? `${label}: ${message.text}` : `[${label}]`;
 }

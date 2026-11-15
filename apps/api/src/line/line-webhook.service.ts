@@ -6,6 +6,7 @@ import { lineUsers, messages } from '../db/schema.js';
 import { LINE_MESSAGING_CLIENT, PROFILE_TTL_MS, REPLY_TOKEN_TTL_MS } from './line.constants.js';
 import { toStoredContent } from './line-message.mapper.js';
 import { ConversationStatusService } from '../conversations/conversation-status.service.js';
+import { CustomerFlowService } from '../tickets/customer-flow.service.js';
 
 @Injectable()
 export class LineWebhookService {
@@ -15,6 +16,7 @@ export class LineWebhookService {
     @Inject(DB) private readonly db: Database,
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
     private readonly status: ConversationStatusService,
+    private readonly flow: CustomerFlowService,
   ) {}
 
   /**
@@ -29,6 +31,9 @@ export class LineWebhookService {
       switch (event.type) {
         case 'message':
           await this.handleMessage(userId, event);
+          break;
+        case 'postback':
+          await this.handlePostback(userId, event);
           break;
         case 'follow':
           await this.syncUser(userId, { force: true, isFollowing: true });
@@ -75,6 +80,40 @@ export class LineWebhookService {
       })
       .where(eq(lineUsers.userId, userId));
     await this.status.reopenIfClosed(userId);
+
+    await this.flow.onMessage(userId, { messageId: inserted[0].id, type: content.type, text: content.text });
+  }
+
+  /** Rich menu and card buttons. Stored like a message so the team sees what the customer pressed. */
+  private async handlePostback(userId: string, event: webhook.PostbackEvent): Promise<void> {
+    await this.syncUser(userId, { isFollowing: true });
+    const sentAt = new Date(event.timestamp);
+    const data = event.postback.data.slice(0, 300);
+
+    const inserted = await this.db
+      .insert(messages)
+      .values({
+        userId,
+        direction: 'in',
+        type: 'postback',
+        text: this.flow.describePostback(data),
+        payload: { data },
+        webhookEventId: event.webhookEventId,
+        replyToken: event.replyToken ?? null,
+        replyTokenExpiresAt: event.replyToken ? new Date(sentAt.getTime() + REPLY_TOKEN_TTL_MS) : null,
+        createdAt: sentAt,
+      })
+      .onConflictDoNothing()
+      .returning({ id: messages.id });
+    if (inserted.length === 0) return;
+
+    await this.db
+      .update(lineUsers)
+      .set({ lastMessageAt: sql`greatest(${lineUsers.lastMessageAt}, ${sentAt.toISOString()}::timestamptz)` })
+      .where(eq(lineUsers.userId, userId));
+    await this.status.reopenIfClosed(userId);
+
+    await this.flow.onPostback(userId, data, { messageId: inserted[0].id, type: 'postback', text: null });
   }
 
   /** Creates or updates the user row, refreshing the LINE profile when it is missing or stale. */

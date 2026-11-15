@@ -6,10 +6,12 @@ import { validateEnv } from './config/env.js';
 import { DatabaseModule } from './db/database.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InboxModule } from './inbox/inbox.module.js';
+import { LineClientModule } from './line/line-client.module.js';
 import { LineModule } from './line/line.module.js';
+import { TicketsModule } from './tickets/tickets.module.js';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }), DatabaseModule, AuthModule, AdminsModule, LineModule, InboxModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }), DatabaseModule, LineClientModule, AuthModule, AdminsModule, LineModule, InboxModule, TicketsModule],
   controllers: [HealthController],
 })
 export class AppModule {}

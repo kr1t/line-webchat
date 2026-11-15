@@ -73,13 +73,21 @@ export class ReplyService {
 
   async retry(userId: string, messageId: string) {
     const [message] = await this.db
-      .select({ id: messages.id, text: messages.text, status: messages.status, retryKey: messages.retryKey })
+      .select({
+        id: messages.id,
+        text: messages.text,
+        status: messages.status,
+        retryKey: messages.retryKey,
+        payload: messages.payload,
+      })
       .from(messages)
       .where(and(eq(messages.id, messageId), eq(messages.userId, userId), eq(messages.direction, 'out')))
       .limit(1);
 
     if (!message) throw new NotFoundException();
     if (message.status !== 'failed') throw new ConflictException({ code: 'not_failed' });
+    // Automatic cards are stored as a summary only; resending would deliver the summary text
+    if (message.payload && (message.payload as { bot?: boolean }).bot) throw new ConflictException({ code: 'not_retryable' });
     await this.assertCanMessage(userId);
 
     // The same retry key lets LINE drop the push if an earlier attempt actually went through

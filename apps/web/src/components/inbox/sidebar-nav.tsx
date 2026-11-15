@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import clsx from "clsx";
-import { LayoutDashboard, MessageCircle, QrCode, Search, Settings, Ticket, Users } from "lucide-react";
+import { BookOpen, LayoutDashboard, MessageCircle, QrCode, Search, Settings, Ticket, Users } from "lucide-react";
 import { CommandPalette } from "@/components/search/command-palette";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import { fetcher } from "@/lib/fetcher";
@@ -25,6 +25,7 @@ export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/share", label: "แชร์ QR", icon: QrCode },
     { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/guide", label: "คู่มือ", icon: BookOpen },
     ...(isSuperAdmin ? [{ href: "/admins", label: "แอดมิน", icon: Users }] : []),
   ];
 

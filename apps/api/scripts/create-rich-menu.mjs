@@ -26,7 +26,8 @@ const menu = {
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
+    // น้องติ๊ก opens the customer guide
+    { bounds: { x: 0, y: 0, width: MASCOT, height: 843 }, action: { type: 'uri', label: 'วิธีใช้', uri: `${(process.env.WEB_ORIGIN ?? '').replace(/\/$/, '')}/help` } },
     area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
     area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
     area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),

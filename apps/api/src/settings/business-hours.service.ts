@@ -29,7 +29,7 @@ export function isOpenAt(hours: BusinessHours, at: Date): boolean {
   return !!today && time >= today.open && time < today.close;
 }
 
-/** " วันจันทร์ 09:00 น." / " วันนี้ 13:00 น." — when the team is next in. */
+/** When the team is next in, e.g. " วันจันทร์ 09:00 น." or " วันนี้ 13:00 น." */
 export function nextOpenText(hours: BusinessHours, at: Date): string {
   const { day, time } = bangkokClock(at);
   for (let offset = 0; offset < 8; offset++) {

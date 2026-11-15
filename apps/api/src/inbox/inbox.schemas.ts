@@ -32,5 +32,8 @@ export type SendMessageBody = z.infer<typeof sendMessageBody>;
 
 export const messageIdSchema = z.uuid();
 
+export const roleBody = z.object({ role: z.enum(['CUSTOMER']).nullable() }).strict();
+export type RoleBody = z.infer<typeof roleBody>;
+
 export const transferBody = z.object({ adminId: z.uuid() }).strict();
 export type TransferBody = z.infer<typeof transferBody>;

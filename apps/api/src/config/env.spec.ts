@@ -34,4 +34,10 @@ describe('validateEnv', () => {
   it('rejects non-postgres database urls', () => {
     expect(() => validateEnv({ ...valid, DATABASE_URL: 'mysql://localhost/db' })).toThrow(/DATABASE_URL/);
   });
+
+  it('treats empty optional values as unset and checks their format', () => {
+    const env = validateEnv({ ...valid, CUSTOMER_RICH_MENU_ID: '', LIFF_ID: '', LINE_LOGIN_CHANNEL_ID: '' });
+    expect(env.CUSTOMER_RICH_MENU_ID).toBeUndefined();
+    expect(() => validateEnv({ ...valid, CUSTOMER_RICH_MENU_ID: 'not-a-menu' })).toThrow(/CUSTOMER_RICH_MENU_ID/);
+  });
 });

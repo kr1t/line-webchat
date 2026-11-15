@@ -26,7 +26,7 @@ export async function fetcher<T>(path: string): Promise<T> {
   return parse<T>(res);
 }
 
-export async function post<T = void>(path: string, body?: unknown, method: "POST" | "PATCH" = "POST"): Promise<T> {
+export async function post<T = void>(path: string, body?: unknown, method: "POST" | "PATCH" | "PUT" | "DELETE" = "POST"): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method,
     headers: body === undefined ? undefined : { "content-type": "application/json" },
@@ -36,3 +36,5 @@ export async function post<T = void>(path: string, body?: unknown, method: "POST
 }
 
 export const patch = <T = void>(path: string, body: unknown) => post<T>(path, body, "PATCH");
+export const put = <T = void>(path: string, body: unknown) => post<T>(path, body, "PUT");
+export const del = <T = void>(path: string) => post<T>(path, undefined, "DELETE");

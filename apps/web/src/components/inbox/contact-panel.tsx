@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import clsx from "clsx";
-import { X } from "lucide-react";
+import { BadgeCheck, X } from "lucide-react";
+import { useStepUp } from "@/components/admins/step-up";
+import { put, RequestError } from "@/lib/fetcher";
 import { Avatar } from "@/components/avatar";
 import { displayName, formatFullDate } from "@/lib/format";
 import type { AdminProfile, ConversationDetail } from "@/lib/types";
@@ -12,7 +17,7 @@ interface ContactPanelProps {
   onClose: () => void;
 }
 
-export function ContactPanel({ conversation: c, open, onClose }: ContactPanelProps) {
+export function ContactPanel({ conversation: c, open, onClose, onChanged }: ContactPanelProps) {
   return (
     <aside
       className={clsx(
@@ -38,6 +43,7 @@ export function ContactPanel({ conversation: c, open, onClose }: ContactPanelPro
           {c.isFollowing ? "เป็นเพื่อนกับ OA" : "บล็อกแล้ว"}
         </span>
       </div>
+      <CustomerAccess conversation={c} onChanged={onChanged} />
       <dl className="space-y-4 border-t border-border px-6 py-5 text-sm">
         <div>
           <dt className="text-muted">แชทครั้งแรก</dt>
@@ -53,5 +59,64 @@ export function ContactPanel({ conversation: c, open, onClose }: ContactPanelPro
         </div>
       </dl>
     </aside>
+  );
+}
+
+const RICH_MENU_NOTES: Record<string, string> = {
+  not_configured: "ยังไม่ได้ตั้งค่า Rich menu ลูกค้า (CUSTOMER_RICH_MENU_ID) ลูกค้าจะยังไม่เห็นเมนู",
+  failed: "ผูก Rich menu ไม่สำเร็จ ลองกดบันทึกอีกครั้ง",
+};
+
+function CustomerAccess({ conversation: c, onChanged }: { conversation: ConversationDetail; onChanged: () => void }) {
+  const withStepUp = useStepUp();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const isCustomer = c.role === "CUSTOMER";
+
+  const toggle = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const result = await withStepUp(() =>
+        put<{ richMenu: string }>(`/conversations/${c.userId}/role`, { role: isCustomer ? null : "CUSTOMER" }),
+      );
+      setNote(RICH_MENU_NOTES[result.richMenu] ?? null);
+      onChanged();
+    } catch (err) {
+      if (!(err instanceof RequestError && err.code === "step_up_cancelled")) setNote("บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="border-t border-border px-6 py-5 text-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-medium">สิทธิ์ลูกค้า</p>
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+            {isCustomer ? (
+              <>
+                <BadgeCheck className="size-3.5 text-emerald-600" aria-hidden />
+                แจ้ง ticket ผ่าน LINE ได้
+              </>
+            ) : (
+              "แชทได้อย่างเดียว"
+            )}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={busy}
+          className={clsx(
+            "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50",
+            isCustomer ? "text-red-600 ring-1 ring-red-200 hover:bg-red-50" : "bg-foreground text-white hover:bg-zinc-800",
+          )}
+        >
+          {busy ? "กำลังบันทึก…" : isCustomer ? "ถอนสิทธิ์" : "ให้สิทธิ์"}
+        </button>
+      </div>
+      {note && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">{note}</p>}
+    </section>
   );
 }

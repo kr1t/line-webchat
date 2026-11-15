@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import { StepUpProvider } from "@/components/admins/step-up";
 import { fetcher } from "@/lib/fetcher";
 import type { AdminProfile, ConversationDetail, MessagePage } from "@/lib/types";
 import { ChatThread } from "./chat-thread";
@@ -21,22 +22,24 @@ export function ThreadView({ conversation: initial, initialPage, me }: ThreadVie
     refreshInterval: 5000,
   });
   return (
-    <div data-thread className="flex h-full min-w-0 flex-1">
-      <ChatThread
-        conversation={conversation}
-        initialPage={initialPage}
-        me={me}
-        onConversationChanged={() => void mutate()}
-        onToggleInfo={() => setInfoOpen((v) => !v)}
-      />
-      <ContactPanel
-        conversation={conversation}
-        me={me}
-        onChanged={() => void mutate()}
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
-      />
-    </div>
+    <StepUpProvider>
+      <div data-thread className="flex h-full min-w-0 flex-1">
+        <ChatThread
+          conversation={conversation}
+          initialPage={initialPage}
+          me={me}
+          onConversationChanged={() => void mutate()}
+          onToggleInfo={() => setInfoOpen((v) => !v)}
+        />
+        <ContactPanel
+          conversation={conversation}
+          me={me}
+          onChanged={() => void mutate()}
+          open={infoOpen}
+          onClose={() => setInfoOpen(false)}
+        />
+      </div>
+    </StepUpProvider>
   );
 }
 

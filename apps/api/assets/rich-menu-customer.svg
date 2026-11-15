@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2500" height="843" viewBox="0 0 2500 843">
+  <rect width="2500" height="843" fill="#FBF8F1"/>
+  <g stroke="#E8E1D3" stroke-width="4"><line x1="833" y1="110" x2="833" y2="733"/><line x1="1667" y1="110" x2="1667" y2="733"/></g>
+  <!-- report -->
+  <g transform="translate(416,330)">
+    <rect x="-150" y="-150" width="300" height="300" rx="70" fill="#F2483A"/>
+    <rect x="-18" y="-95" width="36" height="120" rx="18" fill="#FBF8F1"/>
+    <circle cx="0" cy="75" r="22" fill="#FBF8F1"/>
+  </g>
+  <!-- status -->
+  <g transform="translate(1250,330)">
+    <rect x="-150" y="-150" width="300" height="300" rx="70" fill="#1A1A1A"/>
+    <circle cx="-15" cy="-15" r="70" fill="none" stroke="#FBF8F1" stroke-width="30"/>
+    <line x1="40" y1="40" x2="95" y2="95" stroke="#FBF8F1" stroke-width="34" stroke-linecap="round"/>
+  </g>
+  <!-- talk -->
+  <g transform="translate(2083,330)">
+    <rect x="-150" y="-150" width="300" height="300" rx="70" fill="#FFFFFF" stroke="#1A1A1A" stroke-width="14"/>
+    <path d="M-85,-70 h170 a30,30 0 0 1 30,30 v90 a30,30 0 0 1 -30,30 h-90 l-55,45 v-45 h-25 a30,30 0 0 1 -30,-30 v-90 a30,30 0 0 1 30,-30 z" fill="#1A1A1A"/>
+    <circle cx="-45" cy="5" r="15" fill="#FFFFFF"/><circle cx="0" cy="5" r="15" fill="#FFFFFF"/><circle cx="45" cy="5" r="15" fill="#FFFFFF"/>
+  </g>
+  <g font-family="Sukhumvit Set, Thonburi, sans-serif" font-size="96" font-weight="700" fill="#1A1A1A" text-anchor="middle">
+    <text x="416" y="640">แจ้งปัญหา</text>
+    <text x="1250" y="640">ติดตามสถานะ</text>
+    <text x="2083" y="640">คุยกับทีม</text>
+  </g>
+</svg>

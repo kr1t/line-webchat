@@ -14,6 +14,10 @@ export interface LineClientMock {
   getProfile: ReturnType<typeof vi.fn>;
   replyMessage: ReturnType<typeof vi.fn>;
   pushMessage: ReturnType<typeof vi.fn>;
+  linkRichMenuIdToUser: ReturnType<typeof vi.fn>;
+  unlinkRichMenuIdFromUser: ReturnType<typeof vi.fn>;
+  getMessageQuota: ReturnType<typeof vi.fn>;
+  getMessageQuotaConsumption: ReturnType<typeof vi.fn>;
 }
 
 export function createLineClientMock(): LineClientMock {
@@ -26,6 +30,10 @@ export function createLineClientMock(): LineClientMock {
     })),
     replyMessage: vi.fn(async () => ({ sentMessages: [] })),
     pushMessage: vi.fn(async () => ({ sentMessages: [] })),
+    linkRichMenuIdToUser: vi.fn(async () => ({})),
+    unlinkRichMenuIdFromUser: vi.fn(async () => ({})),
+    getMessageQuota: vi.fn(async () => ({ type: 'limited', value: 200 })),
+    getMessageQuotaConsumption: vi.fn(async () => ({ totalUsage: 20 })),
   };
 }
 
@@ -72,9 +80,10 @@ export async function createAdmin(db: Database, overrides: Partial<typeof admins
   return { admin, password };
 }
 
-export async function sessionCookie(app: NestFastifyApplication, admin: Admin) {
-  const token = await app.get(TokenService).sign('session', admin);
-  return `lc_session=${token}`;
+export async function sessionCookie(app: NestFastifyApplication, admin: Admin, { stepUp = false } = {}) {
+  const tokens = app.get(TokenService);
+  const session = `lc_session=${await tokens.sign('session', admin)}`;
+  return stepUp ? `${session}; lc_sudo=${await tokens.sign('step-up', admin)}` : session;
 }
 
 type InjectOptions = Parameters<NestFastifyApplication['inject']>[0] & object;

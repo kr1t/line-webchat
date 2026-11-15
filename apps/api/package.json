@@ -24,7 +24,8 @@
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
     "db:seed": "node --env-file-if-exists=.env scripts/seed-dev.mjs",
     "db:seed-admin": "node --env-file-if-exists=.env scripts/seed-superadmin.mjs",
-    "webhook:sim": "node --env-file-if-exists=.env scripts/simulate-webhook.mjs"
+    "webhook:sim": "node --env-file-if-exists=.env scripts/simulate-webhook.mjs",
+    "rich-menu:create": "node --env-file-if-exists=.env scripts/create-rich-menu.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

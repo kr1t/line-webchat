@@ -4,3 +4,6 @@ process.env.LINE_CHANNEL_SECRET ??= 'test-channel-secret';
 process.env.LINE_CHANNEL_ACCESS_TOKEN ??= 'test-access-token';
 process.env.JWT_SECRET ??= 'test-jwt-secret-that-is-long-enough-123';
 process.env.TOTP_ENC_KEY ??= Buffer.alloc(32, 7).toString('base64');
+process.env.CUSTOMER_RICH_MENU_ID ??= `richmenu-${'0'.repeat(32)}`;
+process.env.LIFF_ID ??= '1234567890-AbCdEfGh';
+process.env.LINE_LOGIN_CHANNEL_ID ??= '1234567890';

@@ -7,6 +7,7 @@ import useSWR from "swr";
 import clsx from "clsx";
 import { LayoutDashboard, MessageCircle, QrCode, Search, Settings, Ticket, Users } from "lucide-react";
 import { CommandPalette } from "@/components/search/command-palette";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 import { fetcher } from "@/lib/fetcher";
 import type { TicketCounts } from "@/lib/types";
 
@@ -40,6 +41,7 @@ export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
   return (
     <>
+      <NotificationCenter />
       <button
         onClick={() => setSearching(true)}
         title="ค้นหา (⌘K)"

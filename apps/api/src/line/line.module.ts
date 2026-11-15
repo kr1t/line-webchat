@@ -3,11 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { messagingApi } from '@line/bot-sdk';
 import type { Env } from '../config/env.js';
 import { LINE_MESSAGING_CLIENT } from './line.constants.js';
+import { ConversationsModule } from '../conversations/conversations.module.js';
 import { LineSignatureGuard } from './line-signature.guard.js';
 import { LineWebhookController } from './line-webhook.controller.js';
 import { LineWebhookService } from './line-webhook.service.js';
 
 @Module({
+  imports: [ConversationsModule],
   controllers: [LineWebhookController],
   providers: [
     {

@@ -2,10 +2,12 @@ import clsx from "clsx";
 import { X } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { displayName, formatFullDate } from "@/lib/format";
-import type { ConversationDetail } from "@/lib/types";
+import type { AdminProfile, ConversationDetail } from "@/lib/types";
 
 interface ContactPanelProps {
   conversation: ConversationDetail;
+  me: AdminProfile;
+  onChanged: () => void;
   open: boolean;
   onClose: () => void;
 }

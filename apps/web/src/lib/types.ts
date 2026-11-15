@@ -7,6 +7,9 @@ export interface LastMessage {
   createdAt: string;
 }
 
+export type ConversationStatus = "open" | "handling" | "closed";
+export type CustomerRole = "CUSTOMER";
+
 export interface Conversation {
   userId: string;
   displayName: string | null;
@@ -14,14 +17,39 @@ export interface Conversation {
   isFollowing: boolean;
   unreadCount: number;
   lastMessageAt: string | null;
+  role: CustomerRole | null;
+  status: ConversationStatus;
+  assignedAdminId: string | null;
+  assignedName: string | null;
   lastMessage: LastMessage | null;
 }
 
 export interface ConversationDetail extends Omit<Conversation, "lastMessage"> {
   statusMessage: string | null;
+  roleGrantedAt: string | null;
   createdAt: string;
   messageCount: number;
   firstMessageAt: string | null;
+}
+
+export interface ConversationCounts {
+  open: number;
+  mine: number;
+  handling: number;
+  unread: number;
+}
+
+export interface ConversationEvent {
+  id: string;
+  type: "claimed" | "transferred" | "closed" | "reopened" | "role_granted" | "role_revoked" | "ticket_created";
+  data: Record<string, unknown> | null;
+  actorName: string | null;
+  createdAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  displayName: string;
 }
 
 export interface ChatMessage {

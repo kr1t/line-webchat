@@ -87,3 +87,48 @@ export function authedInject(app: NestFastifyApplication, cookie: string) {
       headers: { cookie, origin: WEB_ORIGIN, ...(options as { headers?: Record<string, string> }).headers },
     } as InjectOptions);
 }
+
+let eventSeq = 0;
+
+/** Builds LINE webhook events for one user; each gets unique ids like real deliveries. */
+export function lineEvents(userId: string) {
+  const base = () => {
+    eventSeq += 1;
+    return {
+      mode: 'active',
+      timestamp: Date.now(),
+      webhookEventId: `evt-${process.pid}-${eventSeq}`,
+      deliveryContext: { isRedelivery: false },
+      source: { type: 'user', userId },
+      replyToken: `reply-${eventSeq}`,
+    };
+  };
+  return {
+    text: (text: string) => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `msg-${process.pid}-${eventSeq}`, type: 'text', text, quoteToken: 'q' } };
+    },
+    sticker: () => {
+      const b = base();
+      return {
+        ...b,
+        type: 'message',
+        message: { id: `msg-${process.pid}-${eventSeq}`, type: 'sticker', packageId: '1', stickerId: '1', stickerResourceType: 'STATIC' },
+      };
+    },
+    postback: (data: string) => ({ ...base(), type: 'postback', postback: { data } }),
+  };
+}
+
+/** Posts events to the webhook with a valid signature. */
+export async function postWebhook(app: NestFastifyApplication, events: unknown[]) {
+  const payload = JSON.stringify({ destination: 'Ubot', events });
+  const res = await app.inject({
+    method: 'POST',
+    url: '/line/webhook',
+    headers: { 'content-type': 'application/json', 'x-line-signature': sign(payload) },
+    payload,
+  });
+  if (res.statusCode !== 200) throw new Error(`webhook returned ${res.statusCode}: ${res.body}`);
+  return res;
+}

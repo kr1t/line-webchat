@@ -9,11 +9,22 @@ import { Search } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { fetcher } from "@/lib/fetcher";
 import { displayName, formatListTime, messagePreview } from "@/lib/format";
-import type { Conversation } from "@/lib/types";
+import type { Conversation, ConversationCounts } from "@/lib/types";
+import { StatusBadge } from "./status-badge";
 
-type Filter = "all" | "unread";
+type Filter = "all" | "open" | "mine" | "handling" | "closed" | "unread";
+
+const TABS: { value: Filter; label: string; count?: keyof ConversationCounts }[] = [
+  { value: "all", label: "ทั้งหมด" },
+  { value: "open", label: "เปิด", count: "open" },
+  { value: "mine", label: "ของฉัน", count: "mine" },
+  { value: "handling", label: "กำลังตอบ" },
+  { value: "closed", label: "ปิด" },
+  { value: "unread", label: "ยังไม่อ่าน", count: "unread" },
+];
 
 export const CONVERSATIONS_KEY_PREFIX = "/conversations?";
+export const COUNTS_KEY = "/conversations/counts";
 
 function conversationsKey(filter: Filter, q: string) {
   const params = new URLSearchParams({ filter });
@@ -35,6 +46,9 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
   });
 
   const conversations = data ?? [];
+  const { data: counts } = useSWR<ConversationCounts>(COUNTS_KEY, fetcher, {
+    refreshInterval: 5000,
+  });
 
   return (
     <aside
@@ -56,21 +70,27 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
             className="w-full bg-transparent outline-none placeholder:text-muted"
           />
         </label>
-        <div className="flex gap-1 text-sm" role="tablist">
-          {(["all", "unread"] as const).map((value) => (
-            <button
-              key={value}
-              role="tab"
-              aria-selected={filter === value}
-              onClick={() => setFilter(value)}
-              className={clsx(
-                "rounded-full px-3 py-1 transition-colors",
-                filter === value ? "bg-foreground text-white" : "text-muted hover:bg-zinc-100",
-              )}
-            >
-              {value === "all" ? "ทั้งหมด" : "ยังไม่อ่าน"}
-            </button>
-          ))}
+        <div className="-mx-4 flex gap-1 overflow-x-auto px-4 text-sm [scrollbar-width:none]" role="tablist">
+          {TABS.map(({ value, label, count }) => {
+            const n = count ? counts?.[count] : undefined;
+            return (
+              <button
+                key={value}
+                role="tab"
+                aria-selected={filter === value}
+                onClick={() => setFilter(value)}
+                className={clsx(
+                  "flex shrink-0 items-center gap-1 rounded-full px-3 py-1 transition-colors",
+                  filter === value ? "bg-foreground text-white" : "text-muted hover:bg-zinc-100",
+                )}
+              >
+                {label}
+                {!!n && (
+                  <span className={clsx("text-xs tabular-nums", filter === value ? "text-white/70" : "text-muted")}>{n}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -78,7 +98,7 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
         {error && <li className="px-3 py-6 text-center text-sm text-muted">โหลดรายการแชทไม่สำเร็จ</li>}
         {!error && conversations.length === 0 && (
           <li className="px-3 py-10 text-center text-sm text-muted">
-            {query || filter === "unread" ? "ไม่พบแชทที่ตรงกัน" : "ยังไม่มีแชท"}
+            {query || filter !== "all" ? "ไม่พบแชทที่ตรงกัน" : "ยังไม่มีแชท"}
           </li>
         )}
         {conversations.map((c) => (
@@ -110,6 +130,7 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
                         ? "เพิ่มเพื่อนแล้ว"
                         : "บล็อกแล้ว"}
                   </p>
+                  <StatusBadge status={c.status} assignedName={c.assignedName} compact />
                   {c.unreadCount > 0 && (
                     <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground">
                       {c.unreadCount > 99 ? "99+" : c.unreadCount}

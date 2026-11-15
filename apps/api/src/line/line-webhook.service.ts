@@ -5,6 +5,7 @@ import { DB, type Database } from '../db/database.module.js';
 import { lineUsers, messages } from '../db/schema.js';
 import { LINE_MESSAGING_CLIENT, PROFILE_TTL_MS, REPLY_TOKEN_TTL_MS } from './line.constants.js';
 import { toStoredContent } from './line-message.mapper.js';
+import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 
 @Injectable()
 export class LineWebhookService {
@@ -13,6 +14,7 @@ export class LineWebhookService {
   constructor(
     @Inject(DB) private readonly db: Database,
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
+    private readonly status: ConversationStatusService,
   ) {}
 
   /**
@@ -72,6 +74,7 @@ export class LineWebhookService {
         unreadCount: sql`${lineUsers.unreadCount} + 1`,
       })
       .where(eq(lineUsers.userId, userId));
+    await this.status.reopenIfClosed(userId);
   }
 
   /** Creates or updates the user row, refreshing the LINE profile when it is missing or stale. */

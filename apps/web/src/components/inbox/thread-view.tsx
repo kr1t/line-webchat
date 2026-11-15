@@ -1,16 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import type { ConversationDetail, MessagePage } from "@/lib/types";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import type { AdminProfile, ConversationDetail, MessagePage } from "@/lib/types";
 import { ChatThread } from "./chat-thread";
 import { ContactPanel } from "./contact-panel";
 
-export function ThreadView({ conversation, initialPage }: { conversation: ConversationDetail; initialPage: MessagePage }) {
+interface ThreadViewProps {
+  conversation: ConversationDetail;
+  initialPage: MessagePage;
+  me: AdminProfile;
+}
+
+export function ThreadView({ conversation: initial, initialPage, me }: ThreadViewProps) {
   const [infoOpen, setInfoOpen] = useState(false);
+  // Status, owner and role change while the chat is open; keep them fresh
+  const { data: conversation = initial, mutate } = useSWR<ConversationDetail>(`/conversations/${initial.userId}`, fetcher, {
+    fallbackData: initial,
+    refreshInterval: 5000,
+  });
   return (
     <div data-thread className="flex h-full min-w-0 flex-1">
-      <ChatThread conversation={conversation} initialPage={initialPage} onToggleInfo={() => setInfoOpen((v) => !v)} />
-      <ContactPanel conversation={conversation} open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <ChatThread
+        conversation={conversation}
+        initialPage={initialPage}
+        me={me}
+        onConversationChanged={() => void mutate()}
+        onToggleInfo={() => setInfoOpen((v) => !v)}
+      />
+      <ContactPanel
+        conversation={conversation}
+        me={me}
+        onChanged={() => void mutate()}
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+      />
     </div>
   );
 }

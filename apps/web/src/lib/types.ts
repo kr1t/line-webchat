@@ -181,3 +181,43 @@ export interface BusinessHours {
   days: ({ open: string; close: string } | null)[];
   message: string;
 }
+
+export interface DashboardSummary {
+  range: { from: string; to: string };
+  cards: {
+    newTickets: number;
+    previousNewTickets: number;
+    openBySeverity: Record<Severity, number>;
+    breachedNow: number;
+    responseMetPct: number | null;
+    resolveMetPct: number | null;
+    firstResponseMinutes: Record<Severity, number | null>;
+    unclaimedChats: number;
+    downgradedPct: number | null;
+    csat: { average: number | null; count: number; positivePct: number | null };
+  };
+  daily: ({ day: string } & Record<Severity, number>)[];
+  byCategory: { category: TicketCategory; count: number }[];
+  byStatus: { status: TicketStatus; count: number }[];
+  topReporters: { userId: string; displayName: string | null; pictureUrl: string | null; count: number }[];
+  staff:
+    | {
+        id: string;
+        displayName: string;
+        chatsClaimed: number;
+        messagesSent: number;
+        ticketsResolved: number;
+        firstResponseMinutes: number | null;
+        responseMetPct: number | null;
+        ratingAvg: number | null;
+      }[]
+    | null;
+}
+
+export interface QuotaInfo {
+  type: "limited" | "none";
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  checkedAt: string;
+}

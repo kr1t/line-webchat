@@ -36,7 +36,7 @@ export class TicketsAdminService {
     private readonly quota: QuotaService,
   ) {}
 
-  async list(query: ListTicketsQuery, me: Admin) {
+  async list(query: Omit<ListTicketsQuery, 'limit'> & { limit: number }, me: Admin) {
     const conditions: SQL[] = [];
     if (query.status === 'active') conditions.push(inArray(tickets.status, ACTIVE_STATUSES));
     else if (query.status !== 'all') conditions.push(eq(tickets.status, query.status));

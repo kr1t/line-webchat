@@ -12,25 +12,26 @@ const KEY = 'customer_rich_menu';
 const IMAGE = new URL('../../assets/rich-menu-customer.png', import.meta.url);
 const BULK_LIMIT = 500;
 
-// น้องติ๊ก on the left (says hello), then three buttons of equal width
+// น้องติ๊ก on the left (says hello), then four buttons of equal width
 const MASCOT = 760;
-const BUTTON = (2500 - MASCOT) / 3;
+const BUTTON = (2500 - MASCOT) / 4;
 const area = (x: number, width: number, data: string, label: string): messagingApi.RichMenuArea => ({
   bounds: { x, y: 0, width, height: 843 },
   action: { type: 'postback', data, displayText: label, label },
 });
 
-/** น้องติ๊ก's panel opens the customer guide; the three buttons start the chat flows. */
+/** น้องติ๊ก greets, three buttons start the chat flows, the last one opens the customer guide. */
 export const customerMenu = (helpUrl: string): messagingApi.RichMenuRequest => ({
   size: { width: 2500, height: 843 },
   selected: true,
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    { bounds: { x: 0, y: 0, width: MASCOT, height: 843 }, action: { type: 'uri', label: 'วิธีใช้', uri: helpUrl } },
+    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
     area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
     area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
     area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
+    { bounds: { x: MASCOT + BUTTON * 3, y: 0, width: BUTTON, height: 843 }, action: { type: 'uri', label: 'คู่มือ', uri: helpUrl } },
   ],
 });
 

@@ -12,7 +12,9 @@ const KEY = 'customer_rich_menu';
 const IMAGE = new URL('../../assets/rich-menu-customer.png', import.meta.url);
 const BULK_LIMIT = 500;
 
-const third = Math.round(2500 / 3);
+// น้องติ๊ก on the left (says hello), then three buttons of equal width
+const MASCOT = 760;
+const BUTTON = (2500 - MASCOT) / 3;
 const area = (x: number, width: number, data: string, label: string): messagingApi.RichMenuArea => ({
   bounds: { x, y: 0, width, height: 843 },
   action: { type: 'postback', data, displayText: label, label },
@@ -24,9 +26,10 @@ export const CUSTOMER_MENU: messagingApi.RichMenuRequest = {
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    area(0, third, 'a=report', 'แจ้งปัญหา'),
-    area(third, third, 'a=status', 'ติดตามสถานะ'),
-    area(third * 2, 2500 - third * 2, 'a=talk', 'คุยกับทีม'),
+    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
+    area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
+    area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
+    area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
   ],
 };
 
@@ -58,9 +61,9 @@ export class RichMenuService {
   }
 
   async status(): Promise<RichMenuStatus> {
-    if (this.fromEnv) return { id: this.fromEnv, source: 'env' };
     const stored = await this.stored();
-    return { id: stored, source: stored ? 'auto' : null };
+    if (stored) return { id: stored, source: 'auto' };
+    return this.fromEnv ? { id: this.fromEnv, source: 'env' } : { id: null, source: null };
   }
 
   /** Links the menu for one customer, creating it first if there is none (or it was deleted on LINE). */
@@ -69,7 +72,7 @@ export class RichMenuService {
     try {
       await this.line.linkRichMenuIdToUser(userId, id);
     } catch (error) {
-      if (this.fromEnv || !isNotFound(error)) throw error;
+      if (!(await this.stored()) || !isNotFound(error)) throw error;
       // Someone deleted the menu in LINE Official Account Manager: make a new one and retry once
       this.logger.warn('Customer rich menu is gone on LINE, creating it again');
       await this.forget(id);
@@ -81,20 +84,24 @@ export class RichMenuService {
     await this.line.unlinkRichMenuIdFromUser(userId);
   }
 
-  /** Makes a fresh menu (e.g. after changing the image), moves every customer to it, removes the old one. */
+  /**
+   * Makes a fresh menu from the current image, moves every customer to it and removes the old one.
+   * The new menu is remembered in the database and wins over CUSTOMER_RICH_MENU_ID from then on.
+   */
   async rebuild(): Promise<RichMenuStatus & { linked: number }> {
     const old = await this.stored();
     if (old) await this.forget(old);
-    const id = await this.ensure();
+    this.creating ??= this.create().finally(() => (this.creating = null));
+    const id = await this.creating;
     const linked = await this.linkAllCustomers(id);
     if (old && old !== id) await this.line.deleteRichMenu(old).catch(() => undefined);
-    return { id, source: this.fromEnv ? 'env' : 'auto', linked };
+    return { id, source: 'auto', linked };
   }
 
   private async ensure(): Promise<string> {
-    if (this.fromEnv) return this.fromEnv;
     const stored = await this.stored();
     if (stored) return stored;
+    if (this.fromEnv) return this.fromEnv;
     // Several requests at once share one creation
     this.creating ??= this.create().finally(() => (this.creating = null));
     return this.creating;

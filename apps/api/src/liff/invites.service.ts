@@ -9,6 +9,8 @@ import type { Env } from '../config/env.js';
 import { DB, type Database } from '../db/database.module.js';
 import { type Admin, admins, lineUsers, type RoleInvite, roleInvites } from '../db/schema.js';
 import { CustomerRoleService } from '../inbox/customer-role.service.js';
+import { BotMessengerService } from '../tickets/bot-messenger.service.js';
+import { inviteCard } from '../tickets/ticket-messages.js';
 import type { CreateInviteBody } from './liff.schemas.js';
 
 export type RedeemResult = 'granted' | 'pending' | 'already' | 'invalid' | 'expired' | 'used' | 'revoked' | 'wrong_user' | 'blocked';
@@ -32,6 +34,7 @@ export class InvitesService {
     private readonly roles: CustomerRoleService,
     private readonly attempts: AttemptsService,
     private readonly audit: AuditService,
+    private readonly bot: BotMessengerService,
     config: ConfigService<Env, true>,
   ) {
     this.liffId = config.get('LIFF_ID', { infer: true });
@@ -60,8 +63,12 @@ export class InvitesService {
       })
       .returning();
     await this.audit.log('invite.created', { actorId: actor.id, targetId: invite.id, ip });
+    const url = this.url(token);
+    // Only to the person the invite is locked to, so the card cannot end up with someone else
+    const sentToChat =
+      body.sendToChat && body.targetUserId ? await this.bot.push(body.targetUserId, [inviteCard(url, invite.expiresAt)]) : false;
     // The token is shown once, here; it cannot be read back later
-    return { id: invite.id, url: this.url(token), expiresAt: invite.expiresAt, requireApproval: invite.requireApproval };
+    return { id: invite.id, url, expiresAt: invite.expiresAt, requireApproval: invite.requireApproval, sentToChat };
   }
 
   async list() {

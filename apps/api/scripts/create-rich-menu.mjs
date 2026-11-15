@@ -12,7 +12,9 @@ if (!token) {
   process.exit(1);
 }
 
-const third = Math.round(2500 / 3);
+// น้องติ๊ก on the left (says hello), then three buttons of equal width
+const MASCOT = 760;
+const BUTTON = (2500 - MASCOT) / 3;
 const area = (x, width, data, label) => ({
   bounds: { x, y: 0, width, height: 843 },
   action: { type: 'postback', data, displayText: label, label },
@@ -24,9 +26,10 @@ const menu = {
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    area(0, third, 'a=report', 'แจ้งปัญหา'),
-    area(third, third, 'a=status', 'ติดตามสถานะ'),
-    area(third * 2, 2500 - third * 2, 'a=talk', 'คุยกับทีม'),
+    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
+    area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
+    area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
+    area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
   ],
 };
 

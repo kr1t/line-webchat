@@ -104,7 +104,7 @@ function RecoveryCodes({ codes, username, onDone }: { codes: string[]; username:
   };
 
   const download = () => {
-    const blob = new Blob([`LineChatbot recovery codes (${username})\n\n${text}\n`], { type: "text/plain" });
+    const blob = new Blob([`tickget recovery codes (${username})\n\n${text}\n`], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = Object.assign(document.createElement("a"), { href: url, download: "linechatbot-recovery-codes.txt" });
     link.click();

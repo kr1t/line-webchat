@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { AdminLogo } from "@/components/admin-logo";
 import { apiGet } from "@/lib/api.server";
 import type { AdminProfile } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
@@ -18,8 +19,8 @@ async function SidebarContent() {
 export function Sidebar() {
   return (
     <nav className="hidden w-16 shrink-0 flex-col items-center gap-2 border-r border-border bg-surface py-4 md:flex" aria-label="เมนูหลัก">
-      <Link href="/inbox" className="mb-4 flex size-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground" aria-label="LineChatbot">
-        LC
+      <Link href="/inbox" className="mb-3" aria-label="tickget admin">
+        <AdminLogo compact />
       </Link>
       <Suspense>
         <SidebarContent />

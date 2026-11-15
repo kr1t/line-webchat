@@ -259,7 +259,7 @@ export function ChatThread({ conversation, initialPage, me, onConversationChange
               <Fragment key={message.id}>
                 {divider}
                 <div className={endsGroup ? "mb-2" : undefined}>
-                  <MessageBubble message={message} showTime={endsGroup} onRetry={retry} />
+                  <MessageBubble message={message} userId={userId} showTime={endsGroup} onRetry={retry} />
                 </div>
               </Fragment>
             );

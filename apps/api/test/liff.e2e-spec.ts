@@ -134,6 +134,21 @@ describe('LIFF pages and invite links (e2e)', () => {
       expect((await alice('POST', '/liff/invites/redeem', { token })).json()).toEqual({ result: 'already' });
     });
 
+    it('can push an invitation card into the invited customer’s chat', async () => {
+      await db.insert(lineUsers).values({ userId: ALICE, displayName: 'Alice' });
+      const res = await asAdmin({ method: 'POST', url: '/role-invites', payload: { targetUserId: ALICE, requireApproval: false, sendToChat: true } });
+      expect(res.json()).toMatchObject({ sentToChat: true });
+      const { url } = res.json<{ url: string }>();
+      const [push] = line.pushMessage.mock.calls;
+      expect(push[0].to).toBe(ALICE);
+      expect(JSON.stringify(push[0].messages)).toContain(url);
+      expect(push[0].messages[0]).toMatchObject({ type: 'flex', sender: { name: 'น้องติ๊ก' } });
+
+      // Without a locked customer there is nobody to send it to
+      const open = await asAdmin({ method: 'POST', url: '/role-invites', payload: { sendToChat: true } });
+      expect(open.statusCode).toBe(400);
+    });
+
     it('rejects expired, revoked and unknown links, and slows down guessing', async () => {
       const expired = await invite();
       await db.update(roleInvites).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(roleInvites.id, expired.id));

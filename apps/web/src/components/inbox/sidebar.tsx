@@ -18,8 +18,8 @@ async function SidebarContent() {
 export function Sidebar() {
   return (
     <nav className="hidden w-16 shrink-0 flex-col items-center gap-2 border-r border-border bg-surface py-4 md:flex" aria-label="เมนูหลัก">
-      <Link href="/inbox" className="mb-4 flex size-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground" aria-label="LineChatbot">
-        LC
+      <Link href="/inbox" className="mb-4 flex size-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground" aria-label="tickget">
+        t
       </Link>
       <Suspense>
         <SidebarContent />

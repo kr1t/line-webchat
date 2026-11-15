@@ -6,6 +6,9 @@ import { DB, type Database } from '../db/database.module.js';
 import { lineUsers, messages } from '../db/schema.js';
 import { LINE_MESSAGING_CLIENT } from '../line/line.constants.js';
 
+/** Automatic messages come from the bot persona, shown by LINE as the sender name. */
+export const BOT_SENDER: messagingApi.Sender = { name: 'น้องติ๊ก' };
+
 export interface BotMessage {
   message: messagingApi.Message;
   /** What admins see in the chat for this message */
@@ -16,6 +19,8 @@ export interface BotMessage {
  * Sends automatic messages (ticket cards, prompts, notifications) and keeps a copy in the chat,
  * marked as sent by the system. Replies are free; pushes count against the OA's monthly quota.
  */
+const asBot = (item: BotMessage): messagingApi.Message => ({ ...item.message, sender: BOT_SENDER });
+
 @Injectable()
 export class BotMessengerService {
   private readonly logger = new Logger(BotMessengerService.name);
@@ -33,7 +38,7 @@ export class BotMessengerService {
     const token = await this.takeToken(sourceMessageId);
     if (token) {
       try {
-        await this.line.replyMessage({ replyToken: token, messages: items.map((i) => i.message) });
+        await this.line.replyMessage({ replyToken: token, messages: items.map(asBot) });
         await this.store(userId, items, { delivery: 'reply', error: null });
         return;
       } catch (error) {
@@ -45,6 +50,16 @@ export class BotMessengerService {
       }
     }
     await this.push(userId, items);
+  }
+
+  /** Answers an event that is not stored as a chat message (e.g. someone adding the OA). */
+  async replyToEvent(userId: string, replyToken: string, items: BotMessage[]): Promise<void> {
+    try {
+      await this.line.replyMessage({ replyToken, messages: items.map(asBot) });
+      await this.store(userId, items, { delivery: 'reply', error: null });
+    } catch (error) {
+      this.logger.warn(`Bot reply failed: ${(error as Error).message}`);
+    }
   }
 
   /** Sends without a reply token (status updates, rating requests after an admin closes a ticket). */
@@ -59,7 +74,7 @@ export class BotMessengerService {
       return false;
     }
     try {
-      await this.line.pushMessage({ to: userId, messages: items.map((i) => i.message) }, randomUUID());
+      await this.line.pushMessage({ to: userId, messages: items.map(asBot) }, randomUUID());
       await this.store(userId, items, { delivery: 'push', error: null });
       return true;
     } catch (error) {

@@ -34,6 +34,7 @@ const POSTBACK_LABELS: Record<string, string> = {
   done: 'หายแล้ว ปิดได้เลย',
   reopen: 'ยังไม่หาย',
   skip: 'ข้าม',
+  finish: 'เสร็จแล้ว',
 };
 
 /**
@@ -70,6 +71,10 @@ export class CustomerFlowService {
     const action = params.get('a');
     const reply = (items: BotMessage | BotMessage[]) => this.bot.reply(userId, source.messageId, [items].flat());
 
+    if (action === 'finish') {
+      await this.clearState(userId);
+      return reply(say.doneAdding());
+    }
     if (action === 'talk') {
       await this.clearState(userId);
       return reply(say.talkToTeam());
@@ -189,6 +194,8 @@ export class CustomerFlowService {
           messageId: message.messageId,
         });
         const images = await this.attachments.claimDrafts(userId, ticket.id);
+        // Keep listening: screenshots usually come right after the description
+        await this.setState(userId, { step: 'await_more_info', ticketId: ticket.id });
         await reply(say.ticketCreated(card(ticket), await this.hours.awayTicketNote(), images));
         return true;
       }
@@ -216,12 +223,14 @@ export class CustomerFlowService {
           await reply(say.textOnlyPlease());
           return true;
         }
-        await this.clearState(userId);
         const ticket = state.ticketId ? await this.tickets.findOwn(userId, { id: state.ticketId }) : null;
         if (!ticket || ticket.status === 'closed') {
+          await this.clearState(userId);
           await reply(say.staleAction());
           return true;
         }
+        // Stays open for more text or pictures until "เสร็จแล้ว" or 10 quiet minutes
+        await this.touchState(userId);
         await this.tickets.addCustomerMessage(ticket, text, message.messageId);
         await reply(say.moreInfoSaved(card(ticket)));
         return true;
@@ -252,6 +261,10 @@ export class CustomerFlowService {
       .returning({ userId: lineUsers.userId });
     if (claimed.length === 0) return;
     await this.bot.reply(userId, sourceMessageId, [{ message: { type: 'text', text: message }, summary: 'ตอบนอกเวลาทำการ' }]);
+  }
+
+  async greet(userId: string, replyToken: string): Promise<void> {
+    await this.bot.replyToEvent(userId, replyToken, [say.greeting(await this.isCustomer(userId))]);
   }
 
   liffUrl(ticketId: string): string | null {

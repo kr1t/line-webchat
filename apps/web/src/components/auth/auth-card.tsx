@@ -5,9 +5,9 @@ export function AuthCard({ title, description, children }: { title: string; desc
     <div className="w-full max-w-sm">
       <div className="mb-8 flex items-center gap-2">
         <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground">
-          LC
+          t
         </span>
-        <span className="font-semibold">LineChatbot</span>
+        <span className="font-semibold">tickget</span>
       </div>
       <h1 className="text-xl font-semibold">{title}</h1>
       {description && <p className="mt-1.5 text-sm text-muted">{description}</p>}

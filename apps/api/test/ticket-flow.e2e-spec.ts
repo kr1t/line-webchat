@@ -1,7 +1,7 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { asc, eq } from 'drizzle-orm';
 import type { Database } from '../src/db/database.module.js';
-import { chatStates, conversationEvents, lineUsers, messages, tickets } from '../src/db/schema.js';
+import { chatStates, conversationEvents, lineUsers, messages, ticketAttachments, ticketMessages, tickets } from '../src/db/schema.js';
 import {
   createLineClientMock,
   createTestApp,
@@ -74,7 +74,8 @@ describe('Reporting tickets in the LINE chat (e2e)', () => {
       reporterId: CUSTOMER,
     });
     expect(ticket.responseDueAt.getTime() - ticket.createdAt.getTime()).toBe(60 * 60_000);
-    expect(await db.select().from(chatStates)).toEqual([]);
+    // Still listening for screenshots and details for this ticket
+    expect(await db.select().from(chatStates)).toEqual([expect.objectContaining({ step: 'await_more_info', ticketId: ticket.id })]);
 
     const events = await db.select().from(conversationEvents).where(eq(conversationEvents.userId, CUSTOMER));
     expect(events).toEqual([expect.objectContaining({ type: 'ticket_created', data: expect.objectContaining({ code: 'TK-000001' }) })]);
@@ -206,5 +207,32 @@ describe('Reporting tickets in the LINE chat (e2e)', () => {
     await send(customer.postback(`a=reopen&t=${ticket.id}`));
     const [after] = await db.select().from(tickets).where(eq(tickets.id, ticket.id));
     expect(after).toMatchObject({ status: 'in_progress', resolvedAt: null });
+  });
+
+  it('keeps adding pictures and details to the new ticket until the customer says done', async () => {
+    const ticket = await report('P2', 'จ่ายเงินไม่ได้');
+    await send(customer.image(), customer.text('เกิดตอนกดปุ่มยืนยัน'), customer.image());
+    const notes = await db.select().from(ticketMessages).where(eq(ticketMessages.ticketId, ticket.id));
+    expect(notes.map((n) => n.body)).toContain('เกิดตอนกดปุ่มยืนยัน');
+    expect(await db.select().from(ticketAttachments).where(eq(ticketAttachments.ticketId, ticket.id))).toHaveLength(2);
+
+    await send(customer.postback('a=finish'));
+    expect(lastReplyText()).toContain('เรียบร้อย');
+    expect(await db.select().from(chatStates)).toEqual([]);
+
+    // After "done", chatting goes to the team again
+    line.replyMessage.mockClear();
+    await send(customer.text('ขอบคุณครับ'));
+    expect(line.replyMessage).not.toHaveBeenCalled();
+  });
+
+  it('greets people who add the OA as น้องติ๊ก, with buttons for customers', async () => {
+    const follow = { ...customer.postback('x'), type: 'follow', follow: { isUnblocked: false } } as Record<string, unknown>;
+    delete follow.postback;
+    await send(follow);
+    const [greeting] = lastReply() as (Sent & { sender?: { name: string } })[];
+    expect(greeting.text).toContain('มีอะไรให้น้องติ๊กช่วยเหลือไหม');
+    expect(greeting.sender).toEqual({ name: 'น้องติ๊ก' });
+    expect(greeting.quickReply).toBeDefined();
   });
 });

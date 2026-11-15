@@ -14,7 +14,7 @@ const plexThai = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "LineChatbot",
+  title: "tickget",
   description: "Chat with LINE Official Account users from the web",
   robots: { index: false, follow: false },
 };

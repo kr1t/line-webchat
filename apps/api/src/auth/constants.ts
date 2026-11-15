@@ -11,7 +11,8 @@ export const MAX_FAILED_ATTEMPTS = 5;
 export const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 export const RECOVERY_CODE_COUNT = 10;
-export const TOTP_ISSUER = 'LineChatbot';
+// Label shown in authenticator apps (existing entries keep working)
+export const TOTP_ISSUER = 'tickget';
 
 /** What the signed-in-but-not-yet-verified admin must do next. */
 export type MfaStage = 'change_password' | 'setup_2fa' | 'verify_2fa';

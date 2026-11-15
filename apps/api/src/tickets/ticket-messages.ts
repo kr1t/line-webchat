@@ -115,7 +115,7 @@ export function severityPicker(): BotMessage[] {
     quickReply: quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')),
   };
   return [
-    text('ปัญหารุนแรงแค่ไหนครับ? เลื่อนดูแล้วเลือกระดับได้เลย (เรียงจากมากไปน้อย)', 'ถามระดับความรุนแรง'),
+    text('น้องติ๊กพร้อมช่วยครับ ปัญหารุนแรงแค่ไหนครับ? เลื่อนดูแล้วเลือกระดับได้เลย (เรียงจากมากไปน้อย)', 'ถามระดับความรุนแรง'),
     { message: flex, summary: '[การ์ดเลือกระดับ P1–P5]' },
   ];
 }
@@ -151,7 +151,11 @@ export const imageRejected = () =>
   text('รับรูปนี้ไม่ได้ครับ (รูปละไม่เกิน 5 MB และไม่เกิน 10 รูปต่อเรื่อง)', 'รับรูปไม่ได้');
 
 export const imagesAdded = (ticket: TicketCard) =>
-  text(`📎 แนบรูปใน ${ticketCode(ticket.number)} แล้ว ส่งเพิ่มหรือพิมพ์ข้อความต่อได้เลยครับ`, `แนบรูปใน ${ticketCode(ticket.number)}`);
+  text(
+    `📎 แนบรูปใน ${ticketCode(ticket.number)} แล้ว ส่งเพิ่มได้ หรือกด "เสร็จแล้ว"`,
+    `แนบรูปใน ${ticketCode(ticket.number)}`,
+    addingReplies(),
+  );
 
 export function pickFromCards(): BotMessage {
   return text(
@@ -161,11 +165,16 @@ export function pickFromCards(): BotMessage {
   );
 }
 
+/** Quick replies while the customer can still add pictures or details to a ticket. */
+const addingReplies = () =>
+  quickReply(postback('เสร็จแล้ว', 'a=finish', 'เสร็จแล้ว'), postback('ติดตามสถานะ', 'a=status', 'ติดตามสถานะ'));
+
 export function ticketCreated(ticket: TicketCard, afterHoursNote?: string | null, imageCount = 0): BotMessage {
   const info = SLA[ticket.severity];
   const flex: Flex = {
     type: 'flex',
     altText: `รับเรื่องแล้ว ${ticketCode(ticket.number)}`,
+    quickReply: addingReplies(),
     contents: {
       type: 'bubble',
       size: 'kilo',
@@ -188,6 +197,15 @@ export function ticketCreated(ticket: TicketCard, afterHoursNote?: string | null
             text: afterHoursNote ?? `ทีมจะตอบกลับภายใน ${durationText(info.responseMinutes)}`,
             size: 'xs',
             color: MUTED,
+            wrap: true,
+            margin: 'md',
+          },
+          {
+            type: 'text',
+            text: '📎 ส่งรูปหน้าจอหรือข้อมูลเพิ่มในแชทนี้ได้เลย แล้วกด "เสร็จแล้ว"',
+            size: 'xs',
+            color: RED,
+            weight: 'bold',
             wrap: true,
             margin: 'md',
           },
@@ -289,13 +307,19 @@ export const ticketNotFound = () => text('ไม่พบเรื่องน�
 
 export const askMoreInfo = (ticket: TicketCard) =>
   text(
-    `พิมพ์ข้อมูลเพิ่มสำหรับ ${ticketCode(ticket.number)} ได้เลยครับ`,
+    `ส่งข้อความหรือรูปเพิ่มสำหรับ ${ticketCode(ticket.number)} ได้เลยครับ ครบแล้วกด "เสร็จแล้ว"`,
     `ขอข้อมูลเพิ่ม ${ticketCode(ticket.number)}`,
-    quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')),
+    addingReplies(),
   );
 
 export const moreInfoSaved = (ticket: TicketCard) =>
-  text(`เพิ่มข้อมูลใน ${ticketCode(ticket.number)} แล้ว ทีมจะเห็นทันทีครับ`, `บันทึกข้อมูลเพิ่ม ${ticketCode(ticket.number)}`);
+  text(
+    `เพิ่มข้อมูลใน ${ticketCode(ticket.number)} แล้ว ส่งเพิ่มได้อีก หรือกด "เสร็จแล้ว"`,
+    `บันทึกข้อมูลเพิ่ม ${ticketCode(ticket.number)}`,
+    addingReplies(),
+  );
+
+export const doneAdding = () => text('เรียบร้อยครับ ทีมจะติดต่อกลับในแชทนี้ 🙏', 'จบการเพิ่มข้อมูล');
 
 export const reopened = (ticket: TicketCard) =>
   text(`เปิด ${ticketCode(ticket.number)} อีกครั้งแล้ว ทีมจะตามต่อให้ครับ`, `เปิด ${ticketCode(ticket.number)} อีกครั้ง`);
@@ -323,7 +347,22 @@ export const staleAction = () =>
   text('รายการนี้ใช้ไม่ได้แล้วครับ ดูเรื่องล่าสุดได้ที่ "ติดตามสถานะ"', 'ปุ่มเก่า', quickReply(postback('ติดตามสถานะ', 'a=status', 'ติดตามสถานะ')));
 export const noPermission = () =>
   text('บัญชีนี้ยังแจ้งปัญหาผ่านเมนูไม่ได้ครับ พิมพ์คุยกับทีมได้เลย หรือติดต่อแอดมินเพื่อขอสิทธิ์', 'ยังไม่มีสิทธิ์แจ้ง ticket');
-export const talkToTeam = () => text('พิมพ์ข้อความถึงทีมได้เลยครับ ทีมจะตอบกลับในแชทนี้', 'ชวนคุยกับทีม');
+export const talkToTeam = () => text('พิมพ์ข้อความถึงทีมได้เลยครับ น้องติ๊กจะส่งต่อให้ทีม แล้วทีมจะตอบกลับในแชทนี้', 'ชวนคุยกับทีม');
+
+/** First hello from น้องติ๊ก when someone adds the OA; customers also get the main buttons. */
+export function greeting(isCustomer: boolean): BotMessage {
+  return text(
+    'สวัสดีครับ มีอะไรให้น้องติ๊กช่วยเหลือไหมครับ 😊',
+    'ทักทาย',
+    isCustomer
+      ? quickReply(
+          postback('แจ้งปัญหา', 'a=report', 'แจ้งปัญหา'),
+          postback('ติดตามสถานะ', 'a=status', 'ติดตามสถานะ'),
+          postback('คุยกับทีม', 'a=talk', 'คุยกับทีม'),
+        )
+      : undefined,
+  );
+}
 
 export function statusChanged(ticket: TicketCard, liffUrl: string | null): BotMessage {
   return {

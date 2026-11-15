@@ -37,6 +37,7 @@ export class LineWebhookService {
           break;
         case 'follow':
           await this.syncUser(userId, { force: true, isFollowing: true });
+          if (event.replyToken) await this.flow.greet(userId, event.replyToken);
           break;
         case 'unfollow':
           await this.syncUser(userId, { isFollowing: false, skipProfile: true });

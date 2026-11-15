@@ -22,11 +22,18 @@ interface ContactPanelProps {
   onClose: () => void;
 }
 
+/** LINE sends its own emoji in status messages as the text "(emoji)"; drop those. */
+function cleanStatus(text: string | null) {
+  const cleaned = (text ?? "").replace(/\(emoji\)/gi, "").replace(/\s{2,}/g, " ").trim();
+  return cleaned || null;
+}
+
 export function ContactPanel({ conversation: c, open, onClose, onChanged }: ContactPanelProps) {
   return (
     <aside
       className={clsx(
-        "w-72 shrink-0 border-l border-border bg-surface",
+        // Its own scroll: the panel grows with roles, tickets and notes
+        "w-72 shrink-0 overflow-y-auto overscroll-contain border-l border-border bg-surface",
         open ? "fixed inset-y-0 right-0 z-20 shadow-xl xl:static xl:shadow-none" : "hidden xl:block",
       )}
     >
@@ -39,7 +46,7 @@ export function ContactPanel({ conversation: c, open, onClose, onChanged }: Cont
         <Avatar name={c.displayName} src={c.pictureUrl} seed={c.userId} size={72} />
         <h3 className="mt-3 font-semibold">{customerName(c)}</h3>
         {c.alias && <p className="text-xs text-muted">LINE: {displayName(c.displayName)}</p>}
-        {c.statusMessage && <p className="mt-1 text-sm text-muted">{c.statusMessage}</p>}
+        {cleanStatus(c.statusMessage) && <p className="mt-1 text-sm text-muted">{cleanStatus(c.statusMessage)}</p>}
         <span
           className={clsx(
             "mt-3 rounded-full px-2.5 py-0.5 text-xs",

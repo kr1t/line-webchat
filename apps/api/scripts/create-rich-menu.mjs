@@ -12,9 +12,9 @@ if (!token) {
   process.exit(1);
 }
 
-// น้องติ๊ก on the left (says hello), then three buttons of equal width
+// น้องติ๊ก on the left (says hello), then four buttons of equal width
 const MASCOT = 760;
-const BUTTON = (2500 - MASCOT) / 3;
+const BUTTON = (2500 - MASCOT) / 4;
 const area = (x, width, data, label) => ({
   bounds: { x, y: 0, width, height: 843 },
   action: { type: 'postback', data, displayText: label, label },
@@ -26,11 +26,11 @@ const menu = {
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    // น้องติ๊ก opens the customer guide
-    { bounds: { x: 0, y: 0, width: MASCOT, height: 843 }, action: { type: 'uri', label: 'วิธีใช้', uri: `${(process.env.WEB_ORIGIN ?? '').replace(/\/$/, '')}/help` } },
+    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
     area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
     area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
     area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
+    { bounds: { x: MASCOT + BUTTON * 3, y: 0, width: BUTTON, height: 843 }, action: { type: 'uri', label: 'คู่มือ', uri: `${(process.env.WEB_ORIGIN ?? '').replace(/\/$/, '')}/help` } },
   ],
 };
 

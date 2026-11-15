@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, gt, ilike, inArray, lt, min, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, inArray, lt, min, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DB, type Database } from '../db/database.module.js';
-import { admins, lineUsers, messages } from '../db/schema.js';
+import { admins, conversationEvents, conversationPins, lineUsers, messages } from '../db/schema.js';
 import type { ListConversationsQuery, ListMessagesQuery } from './inbox.schemas.js';
 
 // Only these columns ever leave the API (reply tokens and retry keys stay server-side)
@@ -20,6 +20,12 @@ export const messageColumns = {
 
 const assigned = alias(admins, 'assigned');
 
+// Pins: a team pin shows for everyone, a personal pin only for the admin who made it
+const teamPinSql = sql<boolean>`exists (select 1 from conversation_pins p where p.user_id = ${lineUsers.userId} and p.team)`;
+const teamPinBySql = sql<string | null>`(select a.display_name from conversation_pins p join admins a on a.id = p.pinned_by_id where p.user_id = ${lineUsers.userId} and p.team limit 1)`;
+const minePinSql = (adminId: string) =>
+  sql<boolean>`exists (select 1 from conversation_pins p where p.user_id = ${lineUsers.userId} and not p.team and p.pinned_by_id = ${adminId})`;
+
 const userColumns = {
   userId: lineUsers.userId,
   displayName: lineUsers.displayName,
@@ -27,6 +33,8 @@ const userColumns = {
   isFollowing: lineUsers.isFollowing,
   unreadCount: lineUsers.unreadCount,
   lastMessageAt: lineUsers.lastMessageAt,
+  alias: lineUsers.alias,
+  remark: lineUsers.remark,
   role: lineUsers.role,
   status: lineUsers.status,
   assignedAdminId: lineUsers.assignedAdminId,
@@ -45,7 +53,11 @@ export class InboxService {
 
   async listConversations(query: ListConversationsQuery, adminId: string) {
     const conditions: SQL[] = [];
-    if (query.q) conditions.push(ilike(lineUsers.displayName, `%${escapeLike(query.q)}%`));
+    if (query.q) {
+      const like = `%${escapeLike(query.q)}%`;
+      conditions.push(or(ilike(lineUsers.displayName, like), ilike(lineUsers.alias, like))!);
+    }
+    if (query.filter === 'pinned') conditions.push(sql`(${teamPinSql} or ${minePinSql(adminId)})`);
     if (query.filter === 'unread') conditions.push(gt(lineUsers.unreadCount, 0));
     if (query.filter === 'open' || query.filter === 'handling' || query.filter === 'closed') {
       conditions.push(eq(lineUsers.status, query.filter));
@@ -55,11 +67,12 @@ export class InboxService {
     }
 
     const users = await this.db
-      .select(userColumns)
+      .select({ ...userColumns, pinnedTeam: teamPinSql, pinnedTeamBy: teamPinBySql, pinnedByMe: minePinSql(adminId) })
       .from(lineUsers)
       .leftJoin(assigned, eq(assigned.id, lineUsers.assignedAdminId))
       .where(and(...conditions))
-      .orderBy(sql`${lineUsers.lastMessageAt} desc nulls last`, asc(lineUsers.userId))
+      // Team pins first, then my pins, then the latest chats
+      .orderBy(sql`${teamPinSql} desc`, sql`${minePinSql(adminId)} desc`, sql`${lineUsers.lastMessageAt} desc nulls last`, asc(lineUsers.userId))
       .limit(CONVERSATION_LIMIT);
 
     if (users.length === 0) return [];
@@ -93,10 +106,13 @@ export class InboxService {
     return row;
   }
 
-  async getConversation(userId: string) {
+  async getConversation(userId: string, adminId: string) {
     const [user] = await this.db
       .select({
         ...userColumns,
+        pinnedTeam: teamPinSql,
+        pinnedTeamBy: teamPinBySql,
+        pinnedByMe: minePinSql(adminId),
         statusMessage: lineUsers.statusMessage,
         roleGrantedAt: lineUsers.roleGrantedAt,
         createdAt: lineUsers.createdAt,
@@ -137,6 +153,31 @@ export class InboxService {
     const hasMore = rows.length > query.limit;
     const page = rows.slice(0, query.limit);
     return { messages: page.reverse(), hasMore };
+  }
+
+  async setProfile(userId: string, body: { alias?: string | null; remark?: string | null }, adminId: string) {
+    await this.ensureUser(userId);
+    const [before] = await this.db.select({ alias: lineUsers.alias }).from(lineUsers).where(eq(lineUsers.userId, userId));
+    await this.db.update(lineUsers).set(body).where(eq(lineUsers.userId, userId));
+    if (body.alias !== undefined && body.alias !== before.alias) {
+      await this.db.insert(conversationEvents).values({ userId, actorId: adminId, type: 'renamed', data: { alias: body.alias } });
+    }
+  }
+
+  async pin(userId: string, adminId: string, team: boolean) {
+    await this.ensureUser(userId);
+    await this.db.insert(conversationPins).values({ userId, pinnedById: adminId, team }).onConflictDoNothing();
+  }
+
+  /** Anyone can take down a team pin; a personal pin is only removed for its owner. */
+  async unpin(userId: string, adminId: string, team: boolean) {
+    await this.db
+      .delete(conversationPins)
+      .where(
+        team
+          ? and(eq(conversationPins.userId, userId), eq(conversationPins.team, true))
+          : and(eq(conversationPins.userId, userId), eq(conversationPins.team, false), eq(conversationPins.pinnedById, adminId)),
+      );
   }
 
   async markAsRead(userId: string) {

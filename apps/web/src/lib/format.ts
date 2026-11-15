@@ -54,6 +54,13 @@ export function messagePreview(message: { type: string; text: string | null }): 
 
 export const displayName = (name: string | null) => name ?? "ผู้ใช้ LINE";
 
+/** The name the team gave a customer, falling back to their LINE name. */
+export const customerName = (c: { alias?: string | null; displayName: string | null }) => c.alias || displayName(c.displayName);
+
+/** "LINE: Somchai" next to a team-given name, so the real LINE name is never lost. */
+export const lineNameNote = (c: { alias?: string | null; displayName: string | null }) =>
+  c.alias ? `LINE: ${displayName(c.displayName)}` : null;
+
 const SEND_ERRORS: Record<string, string> = {
   quota_exceeded: "โควตาข้อความของ OA เดือนนี้หมดแล้ว",
   line_rejected: "LINE ไม่รับข้อความนี้",
@@ -96,6 +103,8 @@ export function conversationEventText(event: {
       return `ลูกค้าแจ้งว่า ${typeof data.code === "string" ? data.code : "ticket"} ยังไม่หาย ส่งกลับให้ทีมแก้ใหม่`;
     case "ticket_confirmed":
       return `ลูกค้ายืนยันว่า ${typeof data.code === "string" ? data.code : "ticket"} หายแล้ว`;
+    case "renamed":
+      return typeof data.alias === "string" && data.alias ? `${actor} ตั้งชื่อลูกค้าเป็น "${data.alias}"` : `${actor} ลบชื่อที่ตั้งไว้`;
     case "ticket_created":
       return `สร้าง ticket ${typeof data.code === "string" ? data.code : ""}${typeof data.severity === "string" ? ` (${data.severity})` : ""}`;
     default:

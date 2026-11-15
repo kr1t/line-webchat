@@ -3,6 +3,7 @@ import {
   customType,
   index,
   integer,
+  uniqueIndex,
   jsonb,
   pgEnum,
   pgTable,
@@ -11,6 +12,7 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -102,9 +104,35 @@ export const lineUsers = pgTable(
     assignedAdminId: uuid('assigned_admin_id').references(() => admins.id, { onDelete: 'set null' }),
     statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
     lastAutoReplyAt: timestamp('last_auto_reply_at', { withTimezone: true }),
+    // Name the team uses for this customer, and a note; the LINE name stays in display_name
+    alias: text('alias'),
+    remark: text('remark'),
     ...timestamps,
   },
   (table) => [index('line_users_status_idx').on(table.status, table.lastMessageAt.desc())],
+);
+
+/**
+ * Pinned chats. A personal pin (team = false) is only on that admin's list;
+ * a team pin is on everyone's list (pinned_by just says who put it there).
+ */
+export const conversationPins = pgTable(
+  'conversation_pins',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => lineUsers.userId, { onDelete: 'cascade' }),
+    pinnedById: uuid('pinned_by_id')
+      .notNull()
+      .references(() => admins.id, { onDelete: 'cascade' }),
+    team: boolean('team').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('conversation_pins_personal_idx').on(table.userId, table.pinnedById).where(sql`not ${table.team}`),
+    uniqueIndex('conversation_pins_team_idx').on(table.userId).where(sql`${table.team}`),
+  ],
 );
 
 export const conversationEvents = pgTable(
@@ -377,4 +405,5 @@ export const schema = {
   settings,
   ticketAttachments,
   messageMedia,
+  conversationPins,
 };

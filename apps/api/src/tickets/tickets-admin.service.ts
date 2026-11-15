@@ -59,6 +59,7 @@ export class TicketsAdminService {
           ilike(tickets.title, like),
           ilike(tickets.description, like),
           ilike(lineUsers.displayName, like),
+          ilike(lineUsers.alias, like),
           ...(number !== null ? [eq(tickets.number, number)] : []),
         )!,
       );
@@ -68,6 +69,7 @@ export class TicketsAdminService {
       .select({
         ticket: tickets,
         reporterName: lineUsers.displayName,
+        reporterAlias: lineUsers.alias,
         reporterPicture: lineUsers.pictureUrl,
         assigneeName: assignee.displayName,
         nextDueAt: nextDueSql,
@@ -104,6 +106,7 @@ export class TicketsAdminService {
       .select({
         ticket: tickets,
         reporterName: lineUsers.displayName,
+        reporterAlias: lineUsers.alias,
         reporterPicture: lineUsers.pictureUrl,
         reporterFollowing: lineUsers.isFollowing,
         assigneeName: assignee.displayName,
@@ -303,7 +306,7 @@ export class TicketsAdminService {
 
   private toListItem(
     t: Ticket,
-    joined: { reporterName: string | null; reporterPicture: string | null; assigneeName: string | null },
+    joined: { reporterName: string | null; reporterAlias: string | null; reporterPicture: string | null; assigneeName: string | null },
     now: Date,
   ) {
     const response = deadlineState(t, t.responseDueAt, t.firstResponseAt, now);
@@ -319,7 +322,7 @@ export class TicketsAdminService {
       severity: t.severity,
       reportedSeverity: t.reportedSeverity,
       status: t.status,
-      reporter: { userId: t.reporterId, displayName: joined.reporterName, pictureUrl: joined.reporterPicture },
+      reporter: { userId: t.reporterId, displayName: joined.reporterName, alias: joined.reporterAlias, pictureUrl: joined.reporterPicture },
       assigneeId: t.assigneeId,
       assigneeName: joined.assigneeName,
       createdAt: t.createdAt,

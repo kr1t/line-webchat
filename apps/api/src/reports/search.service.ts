@@ -25,9 +25,9 @@ export class SearchService {
         .orderBy(desc(tickets.createdAt))
         .limit(6),
       this.db
-        .select({ userId: lineUsers.userId, displayName: lineUsers.displayName, pictureUrl: lineUsers.pictureUrl, role: lineUsers.role })
+        .select({ userId: lineUsers.userId, displayName: lineUsers.displayName, alias: lineUsers.alias, pictureUrl: lineUsers.pictureUrl, role: lineUsers.role })
         .from(lineUsers)
-        .where(ilike(lineUsers.displayName, like))
+        .where(or(ilike(lineUsers.displayName, like), ilike(lineUsers.alias, like)))
         .orderBy(desc(lineUsers.lastMessageAt))
         .limit(6),
       this.db

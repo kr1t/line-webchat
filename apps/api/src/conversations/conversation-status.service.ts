@@ -12,7 +12,8 @@ export type ConversationEventType =
   | 'role_revoked'
   | 'ticket_created'
   | 'ticket_reopened'
-  | 'ticket_confirmed';
+  | 'ticket_confirmed'
+  | 'renamed';
 
 const EVENT_LIMIT = 200;
 

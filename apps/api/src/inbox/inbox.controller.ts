@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, Res } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { type AuthedRequest, CurrentAdmin, RequireStepUp } from '../auth/decorators.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
@@ -12,6 +12,12 @@ import {
   messageIdSchema,
   type SendMessageBody,
   sendMessageBody,
+  type PinBody,
+  pinBody,
+  type UnpinQuery,
+  unpinQuery,
+  type ProfileBody,
+  profileBody,
   type RoleBody,
   roleBody,
   type TransferBody,
@@ -47,8 +53,30 @@ export class InboxController {
   }
 
   @Get(':userId')
-  get(@Param('userId', UserIdPipe) userId: string) {
-    return this.inbox.getConversation(userId);
+  get(@CurrentAdmin() admin: Admin, @Param('userId', UserIdPipe) userId: string) {
+    return this.inbox.getConversation(userId, admin.id);
+  }
+
+  @Put(':userId/profile')
+  async setProfile(
+    @CurrentAdmin() admin: Admin,
+    @Param('userId', UserIdPipe) userId: string,
+    @Body(new ZodValidationPipe(profileBody)) body: ProfileBody,
+  ) {
+    await this.inbox.setProfile(userId, body, admin.id);
+    return this.inbox.getConversation(userId, admin.id);
+  }
+
+  @Post(':userId/pin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  pin(@CurrentAdmin() admin: Admin, @Param('userId', UserIdPipe) userId: string, @Body(new ZodValidationPipe(pinBody)) body: PinBody) {
+    return this.inbox.pin(userId, admin.id, body.team);
+  }
+
+  @Delete(':userId/pin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unpin(@CurrentAdmin() admin: Admin, @Param('userId', UserIdPipe) userId: string, @Query(new ZodValidationPipe(unpinQuery)) query: UnpinQuery) {
+    return this.inbox.unpin(userId, admin.id, query.team);
   }
 
   @Get(':userId/messages')

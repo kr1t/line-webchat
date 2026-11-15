@@ -5,7 +5,7 @@ export const lineUserIdSchema = z.string().regex(/^U[0-9a-f]{32}$/, 'invalid LIN
 export const listConversationsQuery = z
   .object({
     q: z.string().trim().max(100).optional(),
-    filter: z.enum(['all', 'unread', 'open', 'mine', 'handling', 'closed']).default('all'),
+    filter: z.enum(['all', 'unread', 'open', 'mine', 'handling', 'closed', 'pinned']).default('all'),
   })
   .strict();
 export type ListConversationsQuery = z.infer<typeof listConversationsQuery>;
@@ -34,6 +34,30 @@ export const messageIdSchema = z.uuid();
 
 export const roleBody = z.object({ role: z.enum(['CUSTOMER']).nullable() }).strict();
 export type RoleBody = z.infer<typeof roleBody>;
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .transform((v) => (v ? v : null));
+
+// Team-wide name and note for a customer; null clears them
+export const profileBody = z
+  .object({ alias: optionalText(60).optional(), remark: optionalText(500).optional() })
+  .strict()
+  .refine((b) => b.alias !== undefined || b.remark !== undefined, { message: 'nothing to update' });
+export type ProfileBody = z.infer<typeof profileBody>;
+
+export const pinBody = z.object({ team: z.boolean().default(false) }).strict();
+export type PinBody = z.infer<typeof pinBody>;
+
+// Query strings carry text, so "true"/"false" here
+export const unpinQuery = z
+  .object({ team: z.enum(['true', 'false']).default('false').transform((v) => v === 'true') })
+  .strict();
+export type UnpinQuery = z.infer<typeof unpinQuery>;
 
 export const transferBody = z.object({ adminId: z.uuid() }).strict();
 export type TransferBody = z.infer<typeof transferBody>;

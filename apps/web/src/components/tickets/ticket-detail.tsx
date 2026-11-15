@@ -11,7 +11,7 @@ import { buttonClass, FormError, inputClass } from "@/components/auth/auth-card"
 import { Dialog } from "@/components/ui/dialog";
 import { useNow } from "@/hooks/use-now";
 import { fetcher, patch, post, RequestError } from "@/lib/fetcher";
-import { displayName, formatFullDate, formatTime, sendErrorText } from "@/lib/format";
+import { customerName, displayName, formatFullDate, formatTime, sendErrorText } from "@/lib/format";
 import {
   CATEGORY_LABELS,
   DEADLINE_LABELS,
@@ -166,7 +166,8 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
           <div className="flex items-center gap-3">
             <Avatar name={ticket.reporter.displayName} src={ticket.reporter.pictureUrl} seed={ticket.reporter.userId} size={36} />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{displayName(ticket.reporter.displayName)}</p>
+              <p className="truncate font-medium">{customerName(ticket.reporter)}</p>
+              {ticket.reporter.alias && <p className="truncate text-xs text-muted">LINE: {displayName(ticket.reporter.displayName)}</p>}
               {!ticket.reporterFollowing && <p className="text-xs text-red-600">บล็อก OA แล้ว ส่งข้อความไม่ได้</p>}
             </div>
             <Link

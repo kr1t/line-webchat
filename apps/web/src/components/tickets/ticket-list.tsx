@@ -8,7 +8,7 @@ import { Download, Search } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { useNow } from "@/hooks/use-now";
 import { fetcher } from "@/lib/fetcher";
-import { displayName, formatListTime } from "@/lib/format";
+import { customerName, formatListTime } from "@/lib/format";
 import { SEVERITIES, SEVERITY_INFO } from "@/lib/tickets";
 import type { Severity, TicketCounts, TicketListItem } from "@/lib/types";
 import { ReopenedBadge, SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
@@ -147,7 +147,7 @@ export function TicketList({ initial, initialCounts }: { initial: TicketListItem
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                     <span className="flex items-center gap-1.5">
                       <Avatar name={t.reporter.displayName} src={t.reporter.pictureUrl} seed={t.reporter.userId} size={16} />
-                      {displayName(t.reporter.displayName)}
+                      {customerName(t.reporter)}
                     </span>
                     <span suppressHydrationWarning>แจ้ง {formatListTime(t.createdAt)}</span>
                     <span>{t.assigneeName ? `ผู้รับผิดชอบ: ${t.assigneeName}` : "ยังไม่มีคนรับ"}</span>

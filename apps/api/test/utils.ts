@@ -9,6 +9,7 @@ import { TokenService } from '../src/auth/token.service.js';
 import { DB, type Database } from '../src/db/database.module.js';
 import { type Admin, admins } from '../src/db/schema.js';
 import { LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
+import { LINE_ID_TOKEN_VERIFIER, type LineIdentity } from '../src/liff/liff.constants.js';
 
 export interface LineClientMock {
   getProfile: ReturnType<typeof vi.fn>;
@@ -37,10 +38,15 @@ export function createLineClientMock(): LineClientMock {
   };
 }
 
+/** ID tokens the fake LINE verify endpoint accepts, keyed by token. */
+export const fakeIdTokens = new Map<string, LineIdentity>();
+
 export async function createTestApp(line: LineClientMock) {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LINE_MESSAGING_CLIENT)
     .useValue(line)
+    .overrideProvider(LINE_ID_TOKEN_VERIFIER)
+    .useValue(async (token: string) => fakeIdTokens.get(token) ?? null)
     .compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter(), { rawBody: true });
@@ -53,7 +59,7 @@ export async function createTestApp(line: LineClientMock) {
 
 export async function resetDatabase(db: Database) {
   await db.execute(
-    sql`truncate table messages, line_users, tickets, role_invites, canned_responses, settings restart identity cascade`,
+    sql`truncate table messages, line_users, tickets, role_invites, canned_responses, settings, login_attempts restart identity cascade`,
   );
 }
 

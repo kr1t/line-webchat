@@ -33,7 +33,7 @@ jobs:
     env:
       DATABASE_URL: postgres://linechatbot:linechatbot@localhost:5432/linechatbot_test
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:

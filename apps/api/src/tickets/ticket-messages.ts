@@ -14,10 +14,17 @@ const MUTED = '#8A857C';
  */
 let mascotBase: string | null = null;
 let helpUrl: string | null = null;
-export function setMascotBase(webOrigin: string) {
+export function setMascotBase(webOrigin: string, liffId?: string) {
   const origin = webOrigin.replace(/\/$/, '');
   mascotBase = origin.startsWith('https://') ? `${origin}/brand/mascot` : null;
-  helpUrl = origin.startsWith('https://') ? `${origin}/help` : null;
+  helpUrl = guideUrl(origin, liffId);
+}
+
+/** The customer guide opens inside LINE through LIFF when there is one, otherwise as a web page. */
+export function guideUrl(webOrigin: string, liffId?: string): string | null {
+  if (liffId) return `https://liff.line.me/${liffId}/help`;
+  const origin = webOrigin.replace(/\/$/, '');
+  return origin.startsWith('https://') ? `${origin}/help` : null;
 }
 export const mascotUrl = (name: 'greet' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5') => (mascotBase ? `${mascotBase}/${name}.png` : null);
 

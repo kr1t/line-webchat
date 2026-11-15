@@ -6,6 +6,7 @@ import { eq, isNotNull } from 'drizzle-orm';
 import type { Env } from '../config/env.js';
 import { DB, type Database } from '../db/database.module.js';
 import { lineUsers, settings } from '../db/schema.js';
+import { guideUrl } from '../tickets/ticket-messages.js';
 import { LINE_BLOB_CLIENT, LINE_MESSAGING_CLIENT } from '../line/line.constants.js';
 
 const KEY = 'customer_rich_menu';
@@ -61,7 +62,8 @@ export class RichMenuService {
     config: ConfigService<Env, true>,
   ) {
     this.fromEnv = config.get('CUSTOMER_RICH_MENU_ID', { infer: true });
-    this.helpUrl = `${new URL(config.get('WEB_ORIGIN', { infer: true })).origin}/help`;
+    const origin = new URL(config.get('WEB_ORIGIN', { infer: true })).origin;
+    this.helpUrl = guideUrl(origin, config.get('LIFF_ID', { infer: true })) ?? `${origin}/help`;
   }
 
   async status(): Promise<RichMenuStatus> {

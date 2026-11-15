@@ -30,8 +30,14 @@ export const createInviteBody = z
     targetUserId: z.string().regex(/^U[0-9a-f]{32}$/).nullable().default(null),
     expiresInHours: z.number().int().min(1).max(168).default(24),
     requireApproval: z.boolean().default(true),
+    // Push an invitation card into the customer's LINE chat (only for invites locked to that customer)
+    sendToChat: z.boolean().default(false),
   })
-  .strict();
+  .strict()
+  .refine((body) => !body.sendToChat || body.targetUserId, {
+    message: 'sendToChat needs targetUserId',
+    path: ['sendToChat'],
+  });
 export type CreateInviteBody = z.infer<typeof createInviteBody>;
 
 export const inviteIdSchema = z.uuid();

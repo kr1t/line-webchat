@@ -390,6 +390,47 @@ export function greeting(isCustomer: boolean): BotMessage {
   );
 }
 
+/** Invitation sent straight into a customer's chat; the button opens the one-time link. */
+export function inviteCard(url: string, expiresAt: Date): BotMessage {
+  const picture = mascotUrl('greet');
+  const expires = thaiTime.format(expiresAt);
+  const flex: Flex = {
+    type: 'flex',
+    altText: 'น้องติ๊กมีคำเชิญให้แจ้งปัญหาผ่าน LINE ได้',
+    contents: {
+      type: 'bubble',
+      size: 'kilo',
+      ...(picture
+        ? { hero: { type: 'image' as const, url: picture, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' as const, backgroundColor: '#FDECE9' } }
+        : {}),
+      styles: { body: { backgroundColor: CREAM }, footer: { backgroundColor: CREAM } },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: 'คำเชิญจากทีมงาน', size: 'xs', color: RED, weight: 'bold' },
+          { type: 'text', text: 'แจ้งปัญหาและติดตามงานได้ในแชทนี้', size: 'md', weight: 'bold', color: INK, wrap: true },
+          {
+            type: 'text',
+            text: 'กดรับสิทธิ์ แล้วเมนูแจ้งปัญหาจะขึ้นในห้องแชท น้องติ๊กจะช่วยส่งเรื่องให้ทีมและแจ้งความคืบหน้าให้ครับ',
+            size: 'xs',
+            color: MUTED,
+            wrap: true,
+          },
+          { type: 'text', text: `ลิงก์ใช้ได้ครั้งเดียว หมดอายุ ${expires}`, size: 'xxs', color: MUTED, wrap: true, margin: 'md' },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [{ type: 'button', style: 'primary', color: RED, height: 'sm', action: { type: 'uri', label: 'รับสิทธิ์', uri: url } }],
+      },
+    },
+  };
+  return { message: flex, summary: '[การ์ดคำเชิญรับสิทธิ์ลูกค้า]' };
+}
+
 export function statusChanged(ticket: TicketCard, liffUrl: string | null): BotMessage {
   return {
     message: {

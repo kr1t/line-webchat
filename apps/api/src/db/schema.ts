@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -77,17 +78,49 @@ export const auditLogs = pgTable(
   (table) => [index('audit_logs_created_at_idx').on(table.createdAt.desc())],
 );
 
-export const lineUsers = pgTable('line_users', {
-  userId: text('user_id').primaryKey(),
-  displayName: text('display_name'),
-  pictureUrl: text('picture_url'),
-  statusMessage: text('status_message'),
-  isFollowing: boolean('is_following').notNull().default(true),
-  profileUpdatedAt: timestamp('profile_updated_at', { withTimezone: true }),
-  lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
-  unreadCount: integer('unread_count').notNull().default(0),
-  ...timestamps,
-});
+export const customerRole = pgEnum('customer_role', ['CUSTOMER']);
+export const conversationStatus = pgEnum('conversation_status', ['open', 'handling', 'closed']);
+
+export const lineUsers = pgTable(
+  'line_users',
+  {
+    userId: text('user_id').primaryKey(),
+    displayName: text('display_name'),
+    pictureUrl: text('picture_url'),
+    statusMessage: text('status_message'),
+    isFollowing: boolean('is_following').notNull().default(true),
+    profileUpdatedAt: timestamp('profile_updated_at', { withTimezone: true }),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+    unreadCount: integer('unread_count').notNull().default(0),
+    // Customer access (tickets + rich menu); null means a regular chat contact
+    role: customerRole('role'),
+    roleGrantedById: uuid('role_granted_by_id').references(() => admins.id, { onDelete: 'set null' }),
+    roleGrantedAt: timestamp('role_granted_at', { withTimezone: true }),
+    // Who is handling the chat right now
+    status: conversationStatus('status').notNull().default('open'),
+    assignedAdminId: uuid('assigned_admin_id').references(() => admins.id, { onDelete: 'set null' }),
+    statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+    lastAutoReplyAt: timestamp('last_auto_reply_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [index('line_users_status_idx').on(table.status, table.lastMessageAt.desc())],
+);
+
+export const conversationEvents = pgTable(
+  'conversation_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => lineUsers.userId, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id').references(() => admins.id, { onDelete: 'set null' }),
+    // claimed | transferred | closed | reopened | role_granted | role_revoked | ticket_created
+    type: text('type').notNull(),
+    data: jsonb('data').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('conversation_events_user_id_created_at_idx').on(table.userId, table.createdAt)],
+);
 
 export const messageDirection = pgEnum('message_direction', ['in', 'out']);
 export const messageStatus = pgEnum('message_status', ['sending', 'sent', 'failed']);
@@ -120,9 +153,179 @@ export const messages = pgTable(
   (table) => [index('messages_user_id_created_at_idx').on(table.userId, table.createdAt.desc())],
 );
 
+export const ticketSeverity = pgEnum('ticket_severity', ['P1', 'P2', 'P3', 'P4', 'P5']);
+export const ticketStatus = pgEnum('ticket_status', [
+  'open',
+  'acknowledged',
+  'in_progress',
+  'waiting_customer',
+  'resolved',
+  'closed',
+]);
+export const ticketCategory = pgEnum('ticket_category', ['login', 'payment', 'data', 'ui', 'other']);
+export const ticketAuthor = pgEnum('ticket_author', ['customer', 'admin', 'system']);
+
+export const tickets = pgTable(
+  'tickets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Shown to customers as TK-000123
+    number: integer('number').notNull().unique().generatedAlwaysAsIdentity(),
+    reporterId: text('reporter_id')
+      .notNull()
+      .references(() => lineUsers.userId, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    category: ticketCategory('category').notNull().default('other'),
+    severity: ticketSeverity('severity').notNull(),
+    reportedSeverity: ticketSeverity('reported_severity').notNull(),
+    status: ticketStatus('status').notNull().default('open'),
+    assigneeId: uuid('assignee_id').references(() => admins.id, { onDelete: 'set null' }),
+    responseDueAt: timestamp('response_due_at', { withTimezone: true }).notNull(),
+    resolveDueAt: timestamp('resolve_due_at', { withTimezone: true }), // null for P5
+    firstResponseAt: timestamp('first_response_at', { withTimezone: true }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    // SLA clock stops while waiting for the customer
+    pausedAt: timestamp('paused_at', { withTimezone: true }),
+    pausedSeconds: integer('paused_seconds').notNull().default(0),
+    responseBreached: boolean('response_breached').notNull().default(false),
+    resolveBreached: boolean('resolve_breached').notNull().default(false),
+    rating: smallint('rating'),
+    ratingComment: text('rating_comment'),
+    ratedAt: timestamp('rated_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index('tickets_status_response_due_idx').on(table.status, table.responseDueAt),
+    index('tickets_reporter_id_idx').on(table.reporterId, table.createdAt.desc()),
+    index('tickets_assignee_id_idx').on(table.assigneeId),
+    index('tickets_created_at_idx').on(table.createdAt),
+  ],
+);
+
+export const ticketMessages = pgTable(
+  'ticket_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    authorType: ticketAuthor('author_type').notNull(),
+    authorAdminId: uuid('author_admin_id').references(() => admins.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    // Team-only note, never sent to LINE or returned to the customer
+    internal: boolean('internal').notNull().default(false),
+    // The chat message this was sent as / came from, so both views stay in sync
+    messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('ticket_messages_ticket_id_created_at_idx').on(table.ticketId, table.createdAt)],
+);
+
+export const ticketEvents = pgTable(
+  'ticket_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id').references(() => admins.id, { onDelete: 'set null' }),
+    // created | status | severity | assignee | rated
+    type: text('type').notNull(),
+    fromValue: text('from_value'),
+    toValue: text('to_value'),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('ticket_events_ticket_id_created_at_idx').on(table.ticketId, table.createdAt)],
+);
+
+export const roleInvites = pgTable(
+  'role_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // sha256 of the token in the link; the token itself is never stored
+    tokenHash: text('token_hash').notNull().unique(),
+    role: customerRole('role').notNull().default('CUSTOMER'),
+    targetUserId: text('target_user_id').references(() => lineUsers.userId, { onDelete: 'cascade' }),
+    requireApproval: boolean('require_approval').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdById: uuid('created_by_id').references(() => admins.id, { onDelete: 'set null' }),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    usedByUserId: text('used_by_user_id'),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    approvedById: uuid('approved_by_id').references(() => admins.id, { onDelete: 'set null' }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedById: uuid('revoked_by_id').references(() => admins.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('role_invites_created_at_idx').on(table.createdAt.desc())],
+);
+
+export const chatFlowStep = pgEnum('chat_flow_step', [
+  'choose_severity',
+  'confirm_severity',
+  'await_description',
+  'await_more_info',
+  'await_rating_comment',
+]);
+
+// Where a customer is in the ticket flow inside the LINE chat
+export const chatStates = pgTable('chat_states', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => lineUsers.userId, { onDelete: 'cascade' }),
+  step: chatFlowStep('step').notNull(),
+  severity: ticketSeverity('severity'),
+  ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cannedResponses = pgTable('canned_responses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shortcut: text('shortcut').notNull().unique(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  useCount: integer('use_count').notNull().default(0),
+  createdById: uuid('created_by_id').references(() => admins.id, { onDelete: 'set null' }),
+  ...timestamps,
+});
+
+// Small key/value store for settings edited in the CMS (e.g. business hours)
+export const settings = pgTable('settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedById: uuid('updated_by_id').references(() => admins.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export type Admin = typeof admins.$inferSelect;
 export type LineUser = typeof lineUsers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type Ticket = typeof tickets.$inferSelect;
+export type TicketMessage = typeof ticketMessages.$inferSelect;
+export type RoleInvite = typeof roleInvites.$inferSelect;
+export type ChatState = typeof chatStates.$inferSelect;
 
-export const schema = { admins, recoveryCodes, loginAttempts, auditLogs, lineUsers, messages };
+export const schema = {
+  admins,
+  recoveryCodes,
+  loginAttempts,
+  auditLogs,
+  lineUsers,
+  conversationEvents,
+  messages,
+  tickets,
+  ticketMessages,
+  ticketEvents,
+  roleInvites,
+  chatStates,
+  cannedResponses,
+  settings,
+};

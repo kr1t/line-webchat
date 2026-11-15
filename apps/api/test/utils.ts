@@ -44,7 +44,9 @@ export async function createTestApp(line: LineClientMock) {
 }
 
 export async function resetDatabase(db: Database) {
-  await db.execute(sql`truncate table messages, line_users restart identity cascade`);
+  await db.execute(
+    sql`truncate table messages, line_users, tickets, role_invites, canned_responses, settings restart identity cascade`,
+  );
 }
 
 export function sign(body: string, secret = process.env.LINE_CHANNEL_SECRET!) {

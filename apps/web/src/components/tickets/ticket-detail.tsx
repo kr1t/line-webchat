@@ -22,6 +22,7 @@ import {
   TICKET_STATUSES,
 } from "@/lib/tickets";
 import type { AdminProfile, Severity, TeamMember, TicketCategory, TicketDetail as Detail, TicketStatus } from "@/lib/types";
+import { CannedPicker } from "@/components/canned/canned-picker";
 import { SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
 import { TICKETS_KEY_PREFIX } from "./ticket-list";
 
@@ -69,7 +70,12 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
         </header>
 
         <Thread ticket={ticket} />
-        <ReplyBox ticketId={ticket.id} disabled={!ticket.reporterFollowing} onSent={apply} />
+        <ReplyBox
+          ticketId={ticket.id}
+          disabled={!ticket.reporterFollowing}
+          onSent={apply}
+          cannedVars={{ name: ticket.reporter.displayName ?? undefined, ticket: ticket.code, agent: me.displayName }}
+        />
         <FormError message={error} />
       </div>
 
@@ -294,10 +300,12 @@ function ReplyBox({
   ticketId,
   disabled,
   onSent,
+  cannedVars,
 }: {
   ticketId: string;
   disabled: boolean;
   onSent: (request: Promise<Detail>) => Promise<void>;
+  cannedVars: Record<string, string | undefined>;
 }) {
   const [text, setText] = useState("");
   const [internal, setInternal] = useState(disabled);
@@ -357,7 +365,7 @@ function ReplyBox({
         className="w-full resize-y bg-transparent text-[15px] outline-none placeholder:text-muted"
       />
       <div className="flex items-center justify-between gap-2">
-        <span />
+        <CannedPicker onPick={(body) => setText((prev) => (prev ? `${prev}\n${body}` : body))} vars={cannedVars} />
         <span className="hidden text-[11px] text-muted md:inline">⌘/Ctrl + Enter เพื่อส่ง</span>
         <button
           type="submit"

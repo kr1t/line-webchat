@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { MessageCircle, Ticket, Users } from "lucide-react";
+import { MessageCircle, Settings, Ticket, Users } from "lucide-react";
 
 export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const pathname = usePathname();
   const items = [
     { href: "/inbox", label: "กล่องข้อความ", icon: MessageCircle },
     { href: "/tickets", label: "Tickets", icon: Ticket },
+    { href: "/settings", label: "Settings", icon: Settings },
     ...(isSuperAdmin ? [{ href: "/admins", label: "แอดมิน", icon: Users }] : []),
   ];
   return (

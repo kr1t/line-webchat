@@ -167,3 +167,17 @@ export interface TicketCounts {
   breached: number;
   urgent: number;
 }
+
+export interface CannedResponse {
+  id: string;
+  shortcut: string;
+  title: string;
+  body: string;
+  useCount: number;
+}
+
+export interface BusinessHours {
+  enabled: boolean;
+  days: ({ open: string; close: string } | null)[];
+  message: string;
+}

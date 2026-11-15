@@ -81,7 +81,8 @@ export class LineWebhookService {
       .where(eq(lineUsers.userId, userId));
     await this.status.reopenIfClosed(userId);
 
-    await this.flow.onMessage(userId, { messageId: inserted[0].id, type: content.type, text: content.text });
+    const handled = await this.flow.onMessage(userId, { messageId: inserted[0].id, type: content.type, text: content.text });
+    if (!handled) await this.flow.replyIfAway(userId, inserted[0].id);
   }
 
   /** Rich menu and card buttons. Stored like a message so the team sees what the customer pressed. */

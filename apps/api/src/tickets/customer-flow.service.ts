@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import type { Env } from '../config/env.js';
+import { BusinessHoursService } from '../settings/business-hours.service.js';
 import { DB, type Database } from '../db/database.module.js';
 import { type ChatState, chatStates, lineUsers, type Ticket } from '../db/schema.js';
 import { BotMessengerService, type BotMessage } from './bot-messenger.service.js';
@@ -46,6 +47,7 @@ export class CustomerFlowService {
     @Inject(DB) private readonly db: Database,
     private readonly tickets: TicketsService,
     private readonly bot: BotMessengerService,
+    private readonly hours: BusinessHoursService,
     config: ConfigService<Env, true>,
   ) {
     this.liffId = config.get('LIFF_ID', { infer: true });
@@ -173,7 +175,7 @@ export class CustomerFlowService {
           description: text,
           messageId: message.messageId,
         });
-        await reply(say.ticketCreated(card(ticket)));
+        await reply(say.ticketCreated(card(ticket), await this.hours.awayTicketNote()));
         return true;
       }
 
@@ -201,6 +203,23 @@ export class CustomerFlowService {
         return true;
       }
     }
+  }
+
+  /**
+   * Normal chat outside business hours gets one automatic note per hour,
+   * so the customer knows when to expect an answer.
+   */
+  async replyIfAway(userId: string, sourceMessageId: string): Promise<void> {
+    const message = await this.hours.awayMessage();
+    if (!message) return;
+    const hourAgo = new Date(Date.now() - 60 * 60_000);
+    const claimed = await this.db
+      .update(lineUsers)
+      .set({ lastAutoReplyAt: new Date() })
+      .where(and(eq(lineUsers.userId, userId), or(isNull(lineUsers.lastAutoReplyAt), lt(lineUsers.lastAutoReplyAt, hourAgo))))
+      .returning({ userId: lineUsers.userId });
+    if (claimed.length === 0) return;
+    await this.bot.reply(userId, sourceMessageId, [{ message: { type: 'text', text: message }, summary: 'ตอบนอกเวลาทำการ' }]);
   }
 
   liffUrl(ticketId: string): string | null {

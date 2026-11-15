@@ -273,7 +273,10 @@ export function ChatThread({ conversation, initialPage, me, onConversationChange
         </p>
       )}
 
-      <Composer onSend={send} disabledReason={conversation.isFollowing ? undefined : "ผู้ใช้บล็อกบัญชีนี้แล้ว จึงส่งข้อความไม่ได้"} />
+      <Composer
+        onSend={send}
+        cannedVars={{ name: conversation.displayName ?? undefined, agent: me.displayName }}
+        disabledReason={conversation.isFollowing ? undefined : "ผู้ใช้บล็อกบัญชีนี้แล้ว จึงส่งข้อความไม่ได้"} />
     </section>
   );
 }

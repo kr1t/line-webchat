@@ -8,6 +8,7 @@ import { buttonClass, FormError, inputClass } from "@/components/auth/auth-card"
 import { StepUpProvider } from "@/components/admins/step-up";
 import { Dialog } from "@/components/ui/dialog";
 import { InvitesSection } from "./invites";
+import { RichMenuSection } from "./rich-menu";
 import { del, fetcher, patch, post, put, RequestError } from "@/lib/fetcher";
 import type { AdminProfile, BusinessHours, CannedResponse } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export function SettingsView({
         </header>
         <BusinessHoursForm initial={initialHours} canEdit={me.role === "SUPER_ADMIN"} />
         <InvitesSection />
+        <RichMenuSection canEdit={me.role === "SUPER_ADMIN"} />
         <CannedList initial={initialCanned} />
       </div>
     </StepUpProvider>

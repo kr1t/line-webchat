@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -304,6 +305,38 @@ export const settings = pgTable('settings', {
     .$onUpdate(() => new Date()),
 });
 
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
+
+export const attachmentSource = pgEnum('attachment_source', ['line', 'liff']);
+
+/**
+ * Screenshots customers send with a ticket. Kept in Postgres (small prototype, no extra storage service).
+ * ticket_id is null while a report in the LINE chat is still being written.
+ */
+export const ticketAttachments = pgTable(
+  'ticket_attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => lineUsers.userId, { onDelete: 'cascade' }),
+    source: attachmentSource('source').notNull(),
+    contentType: text('content_type').notNull(),
+    size: integer('size').notNull(),
+    data: bytea('data').notNull(),
+    // LINE message id, so a redelivered webhook does not store the same picture twice
+    lineMessageId: text('line_message_id').unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('ticket_attachments_ticket_id_idx').on(table.ticketId),
+    index('ticket_attachments_owner_draft_idx').on(table.ownerId, table.createdAt),
+  ],
+);
+
 export type Admin = typeof admins.$inferSelect;
 export type LineUser = typeof lineUsers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
@@ -328,4 +361,5 @@ export const schema = {
   chatStates,
   cannedResponses,
   settings,
+  ticketAttachments,
 };

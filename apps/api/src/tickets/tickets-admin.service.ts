@@ -4,6 +4,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { DB, type Database } from '../db/database.module.js';
 import { type Admin, admins, lineUsers, messages, type Ticket, ticketEvents, ticketMessages, tickets } from '../db/schema.js';
 import { ReplyService } from '../inbox/reply.service.js';
+import { AttachmentsService } from './attachments.service.js';
 import { BotMessengerService } from './bot-messenger.service.js';
 import { CustomerFlowService } from './customer-flow.service.js';
 import { QuotaService } from './quota.service.js';
@@ -34,6 +35,7 @@ export class TicketsAdminService {
     private readonly bot: BotMessengerService,
     private readonly flow: CustomerFlowService,
     private readonly quota: QuotaService,
+    private readonly attachments: AttachmentsService,
   ) {}
 
   async list(query: Omit<ListTicketsQuery, 'limit'> & { limit: number }, me: Admin) {
@@ -147,6 +149,7 @@ export class TicketsAdminService {
 
     return {
       ...this.toListItem(row.ticket, row, new Date()),
+      attachments: await this.attachments.list(id),
       description: row.ticket.description,
       reporterFollowing: row.reporterFollowing,
       ratingComment: row.ticket.ratingComment,

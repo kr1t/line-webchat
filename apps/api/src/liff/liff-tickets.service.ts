@@ -1,9 +1,10 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { DB, type Database } from '../db/database.module.js';
 import { admins, lineUsers, type Ticket, ticketEvents, ticketMessages, tickets } from '../db/schema.js';
 import { ACTIVE_STATUSES, durationText, SLA, ticketCode } from '../tickets/sla.js';
 import { TicketsService } from '../tickets/tickets.service.js';
+import { AttachmentsService } from '../tickets/attachments.service.js';
 import type { CreateTicketBody } from './liff.schemas.js';
 
 const summary = (t: Ticket) => ({
@@ -25,6 +26,7 @@ export class LiffTicketsService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly tickets: TicketsService,
+    private readonly attachments: AttachmentsService,
   ) {}
 
   async assertCustomer(userId: string) {
@@ -71,6 +73,12 @@ export class LiffTicketsService {
     return {
       ...summary(ticket),
       description: ticket.description,
+      attachments: (await this.attachments.list(id)).map(({ id: attachmentId, contentType, size, createdAt }) => ({
+        id: attachmentId,
+        contentType,
+        size,
+        createdAt,
+      })),
       messages: thread.map((m) => ({ ...m, authorName: m.from === 'admin' ? (m.authorName ?? 'ทีมงาน') : null })),
       statusHistory: [{ status: 'open', at: ticket.createdAt }, ...history.map((h) => ({ status: h.toValue, at: h.createdAt }))],
     };
@@ -88,6 +96,19 @@ export class LiffTicketsService {
     if (ticket.status === 'closed') throw new ConflictException({ code: 'ticket_closed' });
     await this.tickets.addCustomerMessage(ticket, body, null);
     return this.detail(userId, id);
+  }
+
+  async addImage(userId: string, id: string, data: unknown) {
+    await this.assertCustomer(userId);
+    const ticket = await this.own(userId, id);
+    if (ticket.status === 'closed') throw new ConflictException({ code: 'ticket_closed' });
+    if (!Buffer.isBuffer(data)) throw new BadRequestException({ code: 'not_an_image' });
+    return this.attachments.saveUpload(userId, ticket.id, data);
+  }
+
+  async image(userId: string, id: string, attachmentId: string) {
+    await this.own(userId, id);
+    return this.attachments.file(id, attachmentId);
   }
 
   async confirmResolved(userId: string, id: string) {

@@ -5,6 +5,8 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { AppModule } from './app.module.js';
 
 const ONE_MB = 1024 * 1024;
+// Screenshots from the LIFF page arrive as raw image bodies (resized in the browser first)
+const IMAGE_BODY_LIMIT = 5 * ONE_MB;
 
 export function createAdapter(): FastifyAdapter {
   return new FastifyAdapter({ bodyLimit: ONE_MB, trustProxy: true });
@@ -14,6 +16,12 @@ export function createAdapter(): FastifyAdapter {
 export async function configureApp(app: NestFastifyApplication): Promise<NestFastifyApplication> {
   await app.register(helmet);
   await app.register(cookie);
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addContentTypeParser(/^image\/(jpeg|png|webp|gif)$/, { parseAs: 'buffer', bodyLimit: IMAGE_BODY_LIMIT }, (_req, body, done) =>
+      done(null, body),
+    );
   app.enableShutdownHooks();
   return app;
 }

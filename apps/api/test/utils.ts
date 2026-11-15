@@ -1,4 +1,5 @@
 import { createHmac, randomBytes } from 'node:crypto';
+import { Readable } from 'node:stream';
 import { Test } from '@nestjs/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { sql } from 'drizzle-orm';
@@ -8,7 +9,7 @@ import { hashPassword } from '../src/auth/password.js';
 import { TokenService } from '../src/auth/token.service.js';
 import { DB, type Database } from '../src/db/database.module.js';
 import { type Admin, admins } from '../src/db/schema.js';
-import { LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
+import { LINE_BLOB_CLIENT, LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
 import { LINE_ID_TOKEN_VERIFIER, type LineIdentity } from '../src/liff/liff.constants.js';
 
 export interface LineClientMock {
@@ -19,7 +20,15 @@ export interface LineClientMock {
   unlinkRichMenuIdFromUser: ReturnType<typeof vi.fn>;
   getMessageQuota: ReturnType<typeof vi.fn>;
   getMessageQuotaConsumption: ReturnType<typeof vi.fn>;
+  createRichMenu: ReturnType<typeof vi.fn>;
+  deleteRichMenu: ReturnType<typeof vi.fn>;
+  linkRichMenuIdToUsers: ReturnType<typeof vi.fn>;
+  setRichMenuImage: ReturnType<typeof vi.fn>;
+  getMessageContent: ReturnType<typeof vi.fn>;
 }
+
+/** Smallest bytes that look like a JPEG to the sniffer. */
+export const FAKE_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 1)]);
 
 export function createLineClientMock(): LineClientMock {
   return {
@@ -35,6 +44,12 @@ export function createLineClientMock(): LineClientMock {
     unlinkRichMenuIdFromUser: vi.fn(async () => ({})),
     getMessageQuota: vi.fn(async () => ({ type: 'limited', value: 200 })),
     getMessageQuotaConsumption: vi.fn(async () => ({ totalUsage: 20 })),
+    createRichMenu: vi.fn(async () => ({ richMenuId: `richmenu-${'a'.repeat(32)}` })),
+    deleteRichMenu: vi.fn(async () => ({})),
+    linkRichMenuIdToUsers: vi.fn(async () => ({})),
+    // Lives on the blob client in the SDK; one mock object serves both here
+    setRichMenuImage: vi.fn(async () => ({})),
+    getMessageContent: vi.fn(async () => Readable.from([FAKE_JPEG])),
   };
 }
 
@@ -44,6 +59,8 @@ export const fakeIdTokens = new Map<string, LineIdentity>();
 export async function createTestApp(line: LineClientMock) {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LINE_MESSAGING_CLIENT)
+    .useValue(line)
+    .overrideProvider(LINE_BLOB_CLIENT)
     .useValue(line)
     .overrideProvider(LINE_ID_TOKEN_VERIFIER)
     .useValue(async (token: string) => fakeIdTokens.get(token) ?? null)
@@ -132,6 +149,10 @@ export function lineEvents(userId: string) {
       };
     },
     postback: (data: string) => ({ ...base(), type: 'postback', postback: { data } }),
+    image: () => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `img-${process.pid}-${eventSeq}`, type: 'image', contentProvider: { type: 'line' } } };
+    },
   };
 }
 

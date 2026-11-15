@@ -1,14 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "regions": ["sin1"],
+  "regions": [
+    "sin1"
+  ],
   "installCommand": "pnpm install --frozen-lockfile --prod=false",
   "buildCommand": "pnpm build && if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm db:migrate && pnpm db:seed-admin; fi",
   "outputDirectory": "public",
   "functions": {
     "api/index.js": {
-      "includeFiles": "dist/**"
+      "includeFiles": "{dist,assets}/**"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
 }

@@ -68,8 +68,7 @@ export function ContactPanel({ conversation: c, open, onClose, onChanged }: Cont
 }
 
 const RICH_MENU_NOTES: Record<string, string> = {
-  not_configured: "ยังไม่ได้ตั้งค่า Rich menu ลูกค้า (CUSTOMER_RICH_MENU_ID) ลูกค้าจะยังไม่เห็นเมนู",
-  failed: "ผูก Rich menu ไม่สำเร็จ ลองกดบันทึกอีกครั้ง",
+  failed: "ให้สิทธิ์แล้ว แต่ผูก Rich menu ไม่สำเร็จ ลองกดอีกครั้ง หรือกดผูกเมนูให้ทุกคนที่หน้า Settings",
 };
 
 function CustomerAccess({ conversation: c, onChanged }: { conversation: ConversationDetail; onChanged: () => void }) {

@@ -94,10 +94,10 @@ describe('Reporting tickets in the LINE chat (e2e)', () => {
     expect((await allTickets())[0]).toMatchObject({ severity: 'P1' });
   });
 
-  it('only accepts text as the description', async () => {
+  it('takes the description as text (stickers are not a description)', async () => {
     await send(customer.postback('a=report'), customer.postback('a=sev&v=P4'));
     await send(customer.sticker());
-    expect(lastReplyText()).toContain('รับเฉพาะข้อความ');
+    expect(lastReplyText()).toContain('รับข้อความกับรูปภาพ');
     expect(await allTickets()).toEqual([]);
 
     await send(customer.text('ปุ่มหน้าแรกสีเพี้ยน'));

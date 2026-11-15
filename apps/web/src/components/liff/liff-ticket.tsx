@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import clsx from "clsx";
 import { CheckCircle2 } from "lucide-react";
+import Image from "next/image";
 import { formatFullDate, formatTime } from "@/lib/format";
+import { ImagePicker, MAX_IMAGES, uploadImage } from "./image-picker";
 import { LiffCard, primaryButton, secondaryButton } from "./brand";
 import { CUSTOMER_STATUS, levelOf, type LiffTicketDetail } from "./liff-data";
 import { liffFetch } from "./liff-provider";
@@ -18,6 +20,8 @@ export function LiffTicket({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const [picked, setPicked] = useState<File[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   if (error) return <p className="py-16 text-center text-sm text-zinc-600">ไม่พบเรื่องนี้</p>;
   if (!t) return <div className="mt-4 h-40 animate-pulse rounded-3xl bg-white/70" />;
@@ -35,6 +39,17 @@ export function LiffTicket({ id }: { id: string }) {
     }
   };
 
+  const uploadPicked = async () => {
+    let failed = 0;
+    for (const [i, file] of picked.entries()) {
+      setUploading(`กำลังส่งรูป ${i + 1}/${picked.length}`);
+      await uploadImage(id, file).catch(() => failed++);
+    }
+    setUploading(failed ? `ส่งไม่สำเร็จ ${failed} รูป (รูปละไม่เกิน 5 MB, ไม่เกิน ${MAX_IMAGES} รูป)` : null);
+    setPicked([]);
+    void mutate();
+  };
+
   const send = async (event: FormEvent) => {
     event.preventDefault();
     if (text.trim() && (await act("/messages", { body: text.trim() }))) setText("");
@@ -45,6 +60,11 @@ export function LiffTicket({ id }: { id: string }) {
       {params.get("created") && (
         <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
           <CheckCircle2 className="size-4" /> รับเรื่องแล้ว {t.expectedResponse}
+        </p>
+      )}
+      {params.get("failed") && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          ส่งรูปไม่สำเร็จ {params.get("failed")} รูป เพิ่มใหม่ได้ด้านล่าง
         </p>
       )}
 
@@ -106,6 +126,22 @@ export function LiffTicket({ id }: { id: string }) {
       )}
       {t.rating !== null && <p className="text-center text-sm text-zinc-600">ขอบคุณสำหรับคะแนน {t.rating}/5 ครับ 🙏</p>}
 
+      {t.attachments.length > 0 && (
+        <section className="grid grid-cols-3 gap-2">
+          {t.attachments.map((a, i) => (
+            <a
+              key={a.id}
+              href={`/api/liff/tickets/${t.id}/attachments/${a.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="relative aspect-square overflow-hidden rounded-2xl border-2 border-[#1A1A1A] bg-white"
+            >
+              <Image src={`/api/liff/tickets/${t.id}/attachments/${a.id}`} alt={`รูปที่ ${i + 1}`} fill sizes="33vw" className="object-cover" unoptimized />
+            </a>
+          ))}
+        </section>
+      )}
+
       <section className="space-y-3">
         {t.messages.map((m) => {
           const mine = m.from === "customer";
@@ -126,6 +162,19 @@ export function LiffTicket({ id }: { id: string }) {
           );
         })}
       </section>
+
+      {t.status !== "closed" && t.attachments.length < MAX_IMAGES && (
+        <LiffCard className="space-y-3">
+          <p className="text-sm font-semibold">แนบรูปเพิ่ม</p>
+          <ImagePicker files={picked} onChange={setPicked} max={MAX_IMAGES - t.attachments.length} />
+          {picked.length > 0 && (
+            <button disabled={!!uploading} onClick={uploadPicked} className={primaryButton}>
+              {uploading ?? `ส่ง ${picked.length} รูป`}
+            </button>
+          )}
+          {uploading && picked.length === 0 && <p className="text-sm text-amber-700">{uploading}</p>}
+        </LiffCard>
+      )}
 
       {t.status !== "closed" && (
         <form onSubmit={send} className="flex items-end gap-2">

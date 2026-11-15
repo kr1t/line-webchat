@@ -6,9 +6,10 @@ import { AuthModule } from '../auth/auth.module.js';
 import { ReplyService } from './reply.service.js';
 import { ConversationsModule } from '../conversations/conversations.module.js';
 import { TeamController } from './team.controller.js';
+import { RichMenuModule } from '../rich-menu/rich-menu.module.js';
 
 @Module({
-  imports: [AuthModule, ConversationsModule],
+  imports: [AuthModule, ConversationsModule, RichMenuModule],
   controllers: [InboxController, TeamController],
   providers: [InboxService, ReplyService, CustomerRoleService],
   exports: [ReplyService, CustomerRoleService],

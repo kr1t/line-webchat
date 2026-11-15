@@ -1,31 +1,24 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { messagingApi } from '@line/bot-sdk';
 import { eq } from 'drizzle-orm';
 import { AuditService } from '../auth/audit.service.js';
-import type { Env } from '../config/env.js';
 import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 import { DB, type Database } from '../db/database.module.js';
 import { lineUsers } from '../db/schema.js';
-import { LINE_MESSAGING_CLIENT } from '../line/line.constants.js';
+import { RichMenuService } from '../rich-menu/rich-menu.service.js';
 
-export type RichMenuResult = 'linked' | 'unlinked' | 'not_configured' | 'failed';
+export type RichMenuResult = 'linked' | 'unlinked' | 'failed';
 
 /** Grants or removes customer access, and swaps the LINE rich menu to match. */
 @Injectable()
 export class CustomerRoleService {
   private readonly logger = new Logger(CustomerRoleService.name);
-  private readonly richMenuId: string | undefined;
 
   constructor(
     @Inject(DB) private readonly db: Database,
-    @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
+    private readonly richMenu: RichMenuService,
     private readonly status: ConversationStatusService,
     private readonly audit: AuditService,
-    config: ConfigService<Env, true>,
-  ) {
-    this.richMenuId = config.get('CUSTOMER_RICH_MENU_ID', { infer: true });
-  }
+  ) {}
 
   async setRole(
     userId: string,
@@ -60,13 +53,12 @@ export class CustomerRoleService {
   }
 
   private async syncRichMenu(userId: string, role: 'CUSTOMER' | null): Promise<RichMenuResult> {
-    if (!this.richMenuId) return 'not_configured';
     try {
       if (role) {
-        await this.line.linkRichMenuIdToUser(userId, this.richMenuId);
+        await this.richMenu.link(userId);
         return 'linked';
       }
-      await this.line.unlinkRichMenuIdFromUser(userId);
+      await this.richMenu.unlink(userId);
       return 'unlinked';
     } catch (error) {
       // The role still applies; the menu can be re-linked by saving the role again

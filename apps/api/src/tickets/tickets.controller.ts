@@ -16,6 +16,8 @@ import {
   updateTicketBody,
 } from './tickets.schemas.js';
 import { TicketsAdminService } from './tickets-admin.service.js';
+import { AttachmentsService } from './attachments.service.js';
+import { sendImage } from './send-image.js';
 import { toCsv } from './csv.js';
 import { SEVERITIES, SLA, STATUS_LABELS } from './sla.js';
 
@@ -26,6 +28,7 @@ export class TicketsController {
   constructor(
     private readonly tickets: TicketsAdminService,
     private readonly audit: AuditService,
+    private readonly attachments: AttachmentsService,
   ) {}
 
   @Get()
@@ -81,6 +84,15 @@ export class TicketsController {
   @Get(':id')
   detail(@Param('id', TicketIdPipe) id: string) {
     return this.tickets.detail(id);
+  }
+
+  @Get(':id/attachments/:attachmentId')
+  async attachment(
+    @Param('id', TicketIdPipe) id: string,
+    @Param('attachmentId', TicketIdPipe) attachmentId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    return sendImage(reply, await this.attachments.file(id, attachmentId));
   }
 
   @Patch(':id')

@@ -13,8 +13,11 @@ const MUTED = '#8A857C';
  * images, so on a local http origin cards simply go without them.
  */
 let mascotBase: string | null = null;
+let helpUrl: string | null = null;
 export function setMascotBase(webOrigin: string) {
-  mascotBase = webOrigin.startsWith('https://') ? `${webOrigin.replace(/\/$/, '')}/brand/mascot` : null;
+  const origin = webOrigin.replace(/\/$/, '');
+  mascotBase = origin.startsWith('https://') ? `${origin}/brand/mascot` : null;
+  helpUrl = origin.startsWith('https://') ? `${origin}/help` : null;
 }
 export const mascotUrl = (name: 'greet' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5') => (mascotBase ? `${mascotBase}/${name}.png` : null);
 
@@ -381,6 +384,7 @@ export const talkToTeam = () => text('พิมพ์ข้อความถึ
 
 /** First hello from น้องติ๊ก when someone adds the OA; customers also get the main buttons. */
 export function greeting(isCustomer: boolean): BotMessage {
+  const help: messagingApi.URIAction[] = helpUrl ? [{ type: 'uri', label: 'วิธีใช้', uri: helpUrl }] : [];
   return text(
     'สวัสดีครับ มีอะไรให้น้องติ๊กช่วยเหลือไหมครับ 😊',
     'ทักทาย',
@@ -389,8 +393,11 @@ export function greeting(isCustomer: boolean): BotMessage {
           postback('แจ้งปัญหา', 'a=report', 'แจ้งปัญหา'),
           postback('ติดตามสถานะ', 'a=status', 'ติดตามสถานะ'),
           postback('คุยกับทีม', 'a=talk', 'คุยกับทีม'),
+          ...help,
         )
-      : undefined,
+      : help.length
+        ? quickReply(...help)
+        : undefined,
   );
 }
 

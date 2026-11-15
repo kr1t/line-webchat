@@ -20,18 +20,19 @@ const area = (x: number, width: number, data: string, label: string): messagingA
   action: { type: 'postback', data, displayText: label, label },
 });
 
-export const CUSTOMER_MENU: messagingApi.RichMenuRequest = {
+/** น้องติ๊ก's panel opens the customer guide; the three buttons start the chat flows. */
+export const customerMenu = (helpUrl: string): messagingApi.RichMenuRequest => ({
   size: { width: 2500, height: 843 },
   selected: true,
   name: 'tickget customer',
   chatBarText: 'เมนู',
   areas: [
-    area(0, MASCOT, 'a=hello', 'น้องติ๊ก'),
+    { bounds: { x: 0, y: 0, width: MASCOT, height: 843 }, action: { type: 'uri', label: 'วิธีใช้', uri: helpUrl } },
     area(MASCOT, BUTTON, 'a=report', 'แจ้งปัญหา'),
     area(MASCOT + BUTTON, BUTTON, 'a=status', 'ติดตามสถานะ'),
     area(MASCOT + BUTTON * 2, BUTTON, 'a=talk', 'คุยกับทีม'),
   ],
-};
+});
 
 export interface RichMenuStatus {
   id: string | null;
@@ -49,6 +50,7 @@ const isNotFound = (error: unknown) => error instanceof HTTPFetchError && (error
 export class RichMenuService {
   private readonly logger = new Logger(RichMenuService.name);
   private readonly fromEnv: string | undefined;
+  private readonly helpUrl: string;
   private creating: Promise<string> | null = null;
 
   constructor(
@@ -58,6 +60,7 @@ export class RichMenuService {
     config: ConfigService<Env, true>,
   ) {
     this.fromEnv = config.get('CUSTOMER_RICH_MENU_ID', { infer: true });
+    this.helpUrl = `${new URL(config.get('WEB_ORIGIN', { infer: true })).origin}/help`;
   }
 
   async status(): Promise<RichMenuStatus> {
@@ -108,7 +111,7 @@ export class RichMenuService {
   }
 
   private async create(): Promise<string> {
-    const { richMenuId } = await this.line.createRichMenu(CUSTOMER_MENU);
+    const { richMenuId } = await this.line.createRichMenu(customerMenu(this.helpUrl));
     try {
       const image = await readFile(IMAGE);
       await this.blob.setRichMenuImage(richMenuId, new Blob([new Uint8Array(image)], { type: 'image/png' }));

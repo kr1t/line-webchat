@@ -8,14 +8,15 @@ import clsx from "clsx";
 import { Search } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { fetcher } from "@/lib/fetcher";
-import { displayName, formatListTime, messagePreview } from "@/lib/format";
+import { customerName, formatListTime, lineNameNote, messagePreview } from "@/lib/format";
 import type { Conversation, ConversationCounts } from "@/lib/types";
 import { StatusBadge } from "./status-badge";
 
-type Filter = "all" | "open" | "mine" | "handling" | "closed" | "unread";
+type Filter = "all" | "pinned" | "open" | "mine" | "handling" | "closed" | "unread";
 
 const TABS: { value: Filter; label: string; count?: keyof ConversationCounts }[] = [
   { value: "all", label: "ทั้งหมด" },
+  { value: "pinned", label: "ปักหมุด" },
   { value: "open", label: "เปิด", count: "open" },
   { value: "mine", label: "ของฉัน", count: "mine" },
   { value: "handling", label: "กำลังตอบ" },
@@ -65,7 +66,7 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ค้นหาชื่อ"
+            placeholder="ค้นหาชื่อ หรือชื่อที่ตั้งไว้"
             maxLength={100}
             className="w-full bg-transparent outline-none placeholder:text-muted"
           />
@@ -113,8 +114,14 @@ export function ConversationList({ initial }: { initial: Conversation[] }) {
               <Avatar name={c.displayName} src={c.pictureUrl} seed={c.userId} size={44} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className={clsx("truncate text-sm", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>
-                    {displayName(c.displayName)}
+                  <span className="flex min-w-0 items-baseline gap-1.5">
+                    {(c.pinnedTeam || c.pinnedByMe) && (
+                      <span className="shrink-0 text-xs" title={c.pinnedTeam ? `ปักให้ทั้งทีมโดย ${c.pinnedTeamBy ?? ""}` : "ปักหมุดของฉัน"}>
+                        {c.pinnedTeam ? "📍" : "📌"}
+                      </span>
+                    )}
+                    <span className={clsx("truncate text-sm", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{customerName(c)}</span>
+                    {lineNameNote(c) && <span className="hidden truncate text-[11px] text-muted xl:inline">{lineNameNote(c)}</span>}
                   </span>
                   {c.lastMessageAt && (
                     <time className="shrink-0 text-xs text-muted" dateTime={c.lastMessageAt} suppressHydrationWarning>

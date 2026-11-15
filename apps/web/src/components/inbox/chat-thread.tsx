@@ -6,11 +6,12 @@ import useSWR, { useSWRConfig } from "swr";
 import { ArrowLeft, Info } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { fetcher, post, RequestError } from "@/lib/fetcher";
-import { conversationEventText, dayKey, displayName, formatDayDivider, formatTime } from "@/lib/format";
+import { conversationEventText, customerName, dayKey, formatDayDivider, formatTime, lineNameNote } from "@/lib/format";
 import type { AdminProfile, ChatMessage, ConversationDetail, ConversationEvent, MessagePage } from "@/lib/types";
 import { Composer } from "./composer";
 import { CONVERSATIONS_KEY_PREFIX, COUNTS_KEY } from "./conversation-list";
 import { MessageBubble } from "./message-bubble";
+import { PinMenu } from "./pin-menu";
 import { StatusActions } from "./status-actions";
 import { StatusBadge } from "./status-badge";
 
@@ -195,11 +196,13 @@ export function ChatThread({ conversation, initialPage, me, onConversationChange
         <Avatar name={conversation.displayName} src={conversation.pictureUrl} seed={userId} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate text-[15px] font-semibold">{displayName(conversation.displayName)}</h2>
+            <h2 className="truncate text-[15px] font-semibold">{customerName(conversation)}</h2>
             <StatusBadge status={conversation.status} assignedName={conversation.assignedName} />
           </div>
+          {lineNameNote(conversation) && <p className="truncate text-xs text-muted">{lineNameNote(conversation)}</p>}
           {!conversation.isFollowing && <p className="text-xs text-red-500">ผู้ใช้บล็อกบัญชีนี้แล้ว</p>}
         </div>
+        <PinMenu conversation={conversation} onChanged={refreshStatus} />
         <StatusActions conversation={conversation} me={me} onChanged={refreshStatus} />
         <button onClick={onToggleInfo} className="rounded-lg p-1.5 text-muted hover:bg-zinc-100 xl:hidden" aria-label="ข้อมูลผู้ติดต่อ">
           <Info className="size-5" />

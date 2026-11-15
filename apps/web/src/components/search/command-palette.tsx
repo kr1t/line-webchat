@@ -12,7 +12,7 @@ import type { Severity, TicketStatus } from "@/lib/types";
 
 interface SearchResults {
   tickets: { id: string; code: string; title: string; severity: Severity; status: TicketStatus }[];
-  conversations: { userId: string; displayName: string | null }[];
+  conversations: { userId: string; displayName: string | null; alias: string | null }[];
   messages: { id: string; userId: string; displayName: string | null; text: string; createdAt: string }[];
 }
 
@@ -65,8 +65,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         key: `c-${c.userId}`,
         href: `/inbox/${c.userId}`,
         icon: User,
-        title: displayName(c.displayName),
-        sub: "เปิดแชท",
+        title: c.alias || displayName(c.displayName),
+        sub: c.alias ? `LINE: ${displayName(c.displayName)} · เปิดแชท` : "เปิดแชท",
       })),
       ...data.messages.map((m) => ({
         key: `m-${m.id}`,

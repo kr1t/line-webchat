@@ -50,6 +50,13 @@
       "when": 1794747470609,
       "tag": "0006_ticket_reopens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794749017093,
+      "tag": "0007_pins_and_aliases",
+      "breakpoints": true
     }
   ]
 }

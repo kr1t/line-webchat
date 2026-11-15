@@ -17,6 +17,11 @@ export interface Conversation {
   isFollowing: boolean;
   unreadCount: number;
   lastMessageAt: string | null;
+  alias: string | null;
+  remark: string | null;
+  pinnedTeam: boolean;
+  pinnedTeamBy: string | null;
+  pinnedByMe: boolean;
   role: CustomerRole | null;
   status: ConversationStatus;
   assignedAdminId: string | null;
@@ -50,7 +55,8 @@ export interface ConversationEvent {
     | "role_revoked"
     | "ticket_created"
     | "ticket_reopened"
-    | "ticket_confirmed";
+    | "ticket_confirmed"
+    | "renamed";
   data: Record<string, unknown> | null;
   actorName: string | null;
   createdAt: string;
@@ -122,7 +128,7 @@ export interface TicketListItem {
   severity: Severity;
   reportedSeverity: Severity;
   status: TicketStatus;
-  reporter: { userId: string; displayName: string | null; pictureUrl: string | null };
+  reporter: { userId: string; displayName: string | null; alias?: string | null; pictureUrl: string | null };
   assigneeId: string | null;
   assigneeName: string | null;
   createdAt: string;

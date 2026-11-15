@@ -10,7 +10,9 @@ export type ConversationEventType =
   | 'reopened'
   | 'role_granted'
   | 'role_revoked'
-  | 'ticket_created';
+  | 'ticket_created'
+  | 'ticket_reopened'
+  | 'ticket_confirmed';
 
 const EVENT_LIMIT = 200;
 

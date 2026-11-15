@@ -9,12 +9,13 @@ import { InboxModule } from './inbox/inbox.module.js';
 import { LiffModule } from './liff/liff.module.js';
 import { LineClientModule } from './line/line-client.module.js';
 import { LineModule } from './line/line.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }), DatabaseModule, LineClientModule, AuthModule, AdminsModule, LineModule, InboxModule, TicketsModule, SettingsModule, ReportsModule, LiffModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }), DatabaseModule, LineClientModule, AuthModule, AdminsModule, LineModule, InboxModule, TicketsModule, SettingsModule, ReportsModule, LiffModule, NotificationsModule],
   controllers: [HealthController],
 })
 export class AppModule {}

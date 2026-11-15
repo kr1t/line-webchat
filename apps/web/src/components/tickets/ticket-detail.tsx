@@ -24,7 +24,7 @@ import {
 } from "@/lib/tickets";
 import type { AdminProfile, Severity, TeamMember, TicketCategory, TicketDetail as Detail, TicketStatus } from "@/lib/types";
 import { CannedPicker } from "@/components/canned/canned-picker";
-import { SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
+import { ReopenedBadge, SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
 import { TICKETS_KEY_PREFIX } from "./ticket-list";
 
 const selectClass =
@@ -63,8 +63,17 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
             <SeverityBadge severity={ticket.severity} withLabel />
             <TicketStatusBadge status={ticket.status} />
             <SlaBadge ticket={ticket} now={now} />
+            <ReopenedBadge count={ticket.reopenCount} />
           </div>
           <h1 className="mt-2 text-xl font-semibold">{ticket.title}</h1>
+          {ticket.reopenedAt && ticket.status !== "closed" && ticket.status !== "resolved" && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <p className="font-semibold">↩️ ลูกค้าแจ้งว่ายังไม่หาย{ticket.reopenCount > 1 ? ` (ครั้งที่ ${ticket.reopenCount})` : ""}</p>
+              <p className="mt-0.5 text-red-700" suppressHydrationWarning>
+                เมื่อ {formatFullDate(ticket.reopenedAt)} {formatTime(ticket.reopenedAt)} · ดูรายละเอียดที่ลูกค้าส่งมาด้านล่าง แล้วแก้ใหม่ก่อนกด &quot;แก้แล้ว&quot;
+              </p>
+            </div>
+          )}
           {ticket.reportedSeverity !== ticket.severity && (
             <p className="mt-1 text-xs text-muted">ลูกค้าแจ้งเป็น {ticket.reportedSeverity} ทีมปรับเป็น {ticket.severity}</p>
           )}
@@ -178,7 +187,7 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
             {ticket.events.map((e) => (
               <li key={e.id}>
                 <span className="text-foreground">{TICKET_EVENT_TEXT(e)}</span>
-                {e.reason && <span className="block">เหตุผล: {e.reason}</span>}
+                {e.reason && e.type === "severity" && <span className="block">เหตุผล: {e.reason}</span>}
                 <time className="block" dateTime={e.createdAt} suppressHydrationWarning>
                   {formatFullDate(e.createdAt)} {formatTime(e.createdAt)}
                 </time>
@@ -280,6 +289,17 @@ function Thread({ ticket }: { ticket: Detail }) {
   return (
     <div className="mb-4 space-y-3 rounded-2xl border border-border bg-surface p-4">
       {ticket.messages.map((m) => {
+        if (m.authorType === "system") {
+          return (
+            <div key={m.id} className="flex items-center gap-3 text-xs text-muted">
+              <span className="h-px flex-1 bg-border" />
+              <span className={m.body.includes("ยังไม่หาย") ? "font-semibold text-red-700" : "font-medium"}>
+                {m.body} · {formatTime(m.createdAt)}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          );
+        }
         if (m.internal) {
           return (
             <div key={m.id} className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm">

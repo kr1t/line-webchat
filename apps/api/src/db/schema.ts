@@ -192,6 +192,9 @@ export const tickets = pgTable(
     pausedSeconds: integer('paused_seconds').notNull().default(0),
     responseBreached: boolean('response_breached').notNull().default(false),
     resolveBreached: boolean('resolve_breached').notNull().default(false),
+    // Times the customer said "not fixed" after the team marked it resolved
+    reopenCount: integer('reopen_count').notNull().default(0),
+    reopenedAt: timestamp('reopened_at', { withTimezone: true }),
     rating: smallint('rating'),
     ratingComment: text('rating_comment'),
     ratedAt: timestamp('rated_at', { withTimezone: true }),

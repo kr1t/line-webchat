@@ -117,10 +117,30 @@ export class TicketsService {
 
   async customerConfirmResolved(ticket: Ticket) {
     await this.changeStatus(ticket, 'closed', null, 'customer_confirmed');
+    await this.note(ticket, '✅ ลูกค้ายืนยันว่าหายแล้ว');
+    await this.conversations.log(ticket.reporterId, null, 'ticket_confirmed', { ticketId: ticket.id, code: ticketCode(ticket.number) });
   }
 
+  /** "ยังไม่หาย": back to the team, counted and written down so nobody misses it. */
   async customerReopen(ticket: Ticket) {
     await this.changeStatus(ticket, 'in_progress', null, 'customer_reopened');
+    const [updated] = await this.db
+      .update(tickets)
+      .set({ reopenCount: sql`${tickets.reopenCount} + 1`, reopenedAt: new Date() })
+      .where(eq(tickets.id, ticket.id))
+      .returning({ reopenCount: tickets.reopenCount });
+    await this.note(ticket, `↩️ ลูกค้าแจ้งว่ายังไม่หาย (ครั้งที่ ${updated.reopenCount})`);
+    await this.conversations.log(ticket.reporterId, null, 'ticket_reopened', {
+      ticketId: ticket.id,
+      code: ticketCode(ticket.number),
+      count: updated.reopenCount,
+    });
+    return updated.reopenCount;
+  }
+
+  /** A line in the ticket thread that both the team and the customer see. */
+  private async note(ticket: Ticket, body: string) {
+    await this.db.insert(ticketMessages).values({ ticketId: ticket.id, authorType: 'system', body });
   }
 
   async rate(ticket: Ticket, rating: number) {

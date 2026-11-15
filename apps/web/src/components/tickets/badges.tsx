@@ -24,6 +24,19 @@ export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   );
 }
 
+/** Customer said "ยังไม่หาย" after the team marked it fixed. */
+export function ReopenedBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-red-200"
+      title={`ลูกค้าแจ้งว่ายังไม่หาย ${count} ครั้ง`}
+    >
+      ↩ ตีกลับ{count > 1 ? ` ×${count}` : ""}
+    </span>
+  );
+}
+
 /** What the team owes next and how long is left: first reply, then the fix. */
 export function SlaBadge({ ticket, now }: { ticket: TicketListItem; now: number }) {
   const { sla } = ticket;

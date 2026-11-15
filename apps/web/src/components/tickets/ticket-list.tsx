@@ -11,14 +11,15 @@ import { fetcher } from "@/lib/fetcher";
 import { displayName, formatListTime } from "@/lib/format";
 import { SEVERITIES, SEVERITY_INFO } from "@/lib/tickets";
 import type { Severity, TicketCounts, TicketListItem } from "@/lib/types";
-import { SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
+import { ReopenedBadge, SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
 
-type View = "active" | "mine" | "unassigned" | "breached" | "closed" | "all";
+type View = "active" | "mine" | "unassigned" | "reopened" | "breached" | "closed" | "all";
 
 const VIEWS: { value: View; label: string; count?: keyof TicketCounts }[] = [
   { value: "active", label: "ยังไม่ปิด", count: "active" },
   { value: "mine", label: "ของฉัน", count: "mine" },
   { value: "unassigned", label: "ยังไม่มีคนรับ", count: "unassigned" },
+  { value: "reopened", label: "ตีกลับ", count: "reopened" },
   { value: "breached", label: "เกินกำหนด", count: "breached" },
   { value: "closed", label: "ปิดแล้ว" },
   { value: "all", label: "ทั้งหมด" },
@@ -32,6 +33,7 @@ export function ticketsQuery(view: View, severity: Severity | null, q: string) {
   if (view === "mine") params.set("assignee", "me");
   if (view === "unassigned") params.set("assignee", "unassigned");
   if (view === "breached") params.set("sla", "breached");
+  if (view === "reopened") params.set("reopened", "1");
   if (severity) params.set("severity", severity);
   if (q.trim()) params.set("q", q.trim());
   return params;
@@ -86,7 +88,7 @@ export function TicketList({ initial, initialCounts }: { initial: TicketListItem
                 className={clsx(
                   "flex shrink-0 items-center gap-1 rounded-full px-3 py-1",
                   view === value ? "bg-foreground text-white" : "text-muted hover:bg-zinc-100",
-                  value === "breached" && !!n && view !== value && "text-red-600",
+                  (value === "breached" || value === "reopened") && !!n && view !== value && "text-red-600",
                 )}
               >
                 {label}
@@ -152,6 +154,7 @@ export function TicketList({ initial, initialCounts }: { initial: TicketListItem
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  {t.status !== "closed" && <ReopenedBadge count={t.reopenCount} />}
                   <SlaBadge ticket={t} now={now} />
                   <TicketStatusBadge status={t.status} />
                 </div>

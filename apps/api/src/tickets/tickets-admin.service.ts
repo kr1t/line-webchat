@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, gte, ilike, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, ilike, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DB, type Database } from '../db/database.module.js';
 import { type Admin, admins, lineUsers, messages, type Ticket, ticketEvents, ticketMessages, tickets } from '../db/schema.js';
@@ -48,6 +48,7 @@ export class TicketsAdminService {
     if (query.assignee === 'me') conditions.push(eq(tickets.assigneeId, me.id));
     else if (query.assignee === 'unassigned') conditions.push(isNull(tickets.assigneeId));
     else if (query.assignee) conditions.push(eq(tickets.assigneeId, query.assignee));
+    if (query.reopened) conditions.push(gt(tickets.reopenCount, 0));
     if (query.from) conditions.push(gte(tickets.createdAt, new Date(query.from)));
     if (query.to) conditions.push(lt(tickets.createdAt, new Date(query.to)));
     if (query.q) {
@@ -91,6 +92,7 @@ export class TicketsAdminService {
         mine: sql<number>`count(*) filter (where ${tickets.assigneeId} = ${me.id})`.mapWith(Number),
         breached: sql<number>`count(*) filter (where ${nextDueSql} < now())`.mapWith(Number),
         urgent: sql<number>`count(*) filter (where ${tickets.severity} in ('P1', 'P2') and ${tickets.firstResponseAt} is null)`.mapWith(Number),
+        reopened: sql<number>`count(*) filter (where ${tickets.reopenCount} > 0)`.mapWith(Number),
       })
       .from(tickets)
       .where(inArray(tickets.status, ACTIVE_STATUSES));
@@ -325,6 +327,8 @@ export class TicketsAdminService {
       resolvedAt: t.resolvedAt,
       closedAt: t.closedAt,
       rating: t.rating,
+      reopenCount: t.reopenCount,
+      reopenedAt: t.reopenedAt,
       sla: {
         response,
         resolve,

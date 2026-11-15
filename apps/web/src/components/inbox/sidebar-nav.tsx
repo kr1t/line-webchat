@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import useSWR from "swr";
 import clsx from "clsx";
 import { LayoutDashboard, MessageCircle, Search, Settings, Ticket, Users } from "lucide-react";
 import { CommandPalette } from "@/components/search/command-palette";
+import { fetcher } from "@/lib/fetcher";
+import type { TicketCounts } from "@/lib/types";
 
 const itemClass = "flex size-10 items-center justify-center rounded-xl";
 
 export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const pathname = usePathname();
   const [searching, setSearching] = useState(false);
+  // P1/P2 tickets nobody has answered yet: a red number on the Tickets icon
+  const { data: counts } = useSWR<TicketCounts>("/tickets/counts", fetcher, { refreshInterval: 15_000 });
+  const urgent = counts?.urgent ?? 0;
   const items = [
     { href: "/inbox", label: "กล่องข้อความ", icon: MessageCircle },
     { href: "/tickets", label: "Tickets", icon: Ticket },
@@ -50,9 +56,21 @@ export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             title={label}
             aria-label={label}
             aria-current={active ? "page" : undefined}
-            className={clsx(itemClass, active ? "bg-zinc-100 text-foreground" : "text-muted hover:bg-zinc-50 hover:text-foreground")}
+            className={clsx(
+              itemClass,
+              "relative",
+              active ? "bg-zinc-100 text-foreground" : "text-muted hover:bg-zinc-50 hover:text-foreground",
+            )}
           >
             <Icon className="size-5" strokeWidth={1.75} />
+            {href === "/tickets" && urgent > 0 && (
+              <span
+                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
+                title={`P1/P2 ที่ยังไม่มีคนตอบ ${urgent} เรื่อง`}
+              >
+                {urgent > 9 ? "9+" : urgent}
+              </span>
+            )}
           </Link>
         );
       })}

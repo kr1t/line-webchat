@@ -35,6 +35,7 @@ const POSTBACK_LABELS: Record<string, string> = {
   reopen: 'ยังไม่หาย',
   skip: 'ข้าม',
   finish: 'เสร็จแล้ว',
+  hello: 'น้องติ๊ก',
 };
 
 /**
@@ -71,6 +72,9 @@ export class CustomerFlowService {
     const action = params.get('a');
     const reply = (items: BotMessage | BotMessage[]) => this.bot.reply(userId, source.messageId, [items].flat());
 
+    if (action === 'hello') {
+      return reply(say.greeting(await this.isCustomer(userId)));
+    }
     if (action === 'finish') {
       await this.clearState(userId);
       return reply(say.doneAdding());

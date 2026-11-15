@@ -8,6 +8,19 @@ const INK = '#1A1A1A';
 const CREAM = '#FBF8F1';
 const MUTED = '#8A857C';
 
+/**
+ * น้องติ๊ก pictures live in the web app (apps/web/public/brand/mascot). LINE only loads https
+ * images, so on a local http origin cards simply go without them.
+ */
+let mascotBase: string | null = null;
+export function setMascotBase(webOrigin: string) {
+  mascotBase = webOrigin.startsWith('https://') ? `${webOrigin.replace(/\/$/, '')}/brand/mascot` : null;
+}
+export const mascotUrl = (name: 'greet' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5') => (mascotBase ? `${mascotBase}/${name}.png` : null);
+
+// Mood colours behind each น้องติ๊ก picture
+const MOOD_BG: Record<Severity, string> = { P1: '#FDD5D0', P2: '#FDE2C6', P3: '#FBEFB7', P4: '#D3EFDC', P5: '#D3E3FB' };
+
 type Flex = messagingApi.FlexMessage;
 type Bubble = messagingApi.FlexBubble;
 type QuickReply = messagingApi.QuickReply;
@@ -69,9 +82,22 @@ const thaiTime = new Intl.DateTimeFormat('th-TH', {
 export function severityPicker(): BotMessage[] {
   const bubbles: Bubble[] = SEVERITIES.map((severity) => {
     const info = SLA[severity];
+    const picture = mascotUrl(severity.toLowerCase() as 'p1');
     return {
       type: 'bubble',
       size: 'micro',
+      ...(picture
+        ? {
+            hero: {
+              type: 'image' as const,
+              url: picture,
+              size: 'full',
+              aspectRatio: '1:1',
+              aspectMode: 'cover' as const,
+              backgroundColor: MOOD_BG[severity],
+            },
+          }
+        : {}),
       styles: { body: { backgroundColor: CREAM }, footer: { backgroundColor: CREAM } },
       body: {
         type: 'box',

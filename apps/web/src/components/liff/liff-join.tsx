@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLiff, liffFetch } from "./liff-provider";
 import { LiffCard, primaryButton } from "./brand";
+import { Mascot } from "./mascot";
 
 type Result = "granted" | "pending" | "already" | "invalid" | "expired" | "used" | "revoked" | "wrong_user" | "blocked";
 
@@ -57,7 +58,8 @@ export function LiffJoin() {
 
   return (
     <div className="space-y-4 pt-6">
-      <LiffCard className="text-center">
+      <LiffCard className="flex flex-col items-center text-center">
+        <Mascot mood={message.ok ? (result === "pending" ? "p3" : "greet") : "p2"} size={120} className="mb-3" />
         <p className="text-xl font-extrabold">{message.title}</p>
         <p className="mt-2 text-sm text-zinc-600">{message.body}</p>
       </LiffCard>

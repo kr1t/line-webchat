@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { ChevronRight, Plus } from "lucide-react";
 import { formatListTime } from "@/lib/format";
 import { LiffCard, primaryButton } from "./brand";
+import { Mascot } from "./mascot";
 import { CUSTOMER_STATUS, levelOf, type LiffTicket } from "./liff-data";
 import { liffFetch, useLiff } from "./liff-provider";
 
@@ -17,8 +18,9 @@ export function LiffHome() {
 
   if (!isCustomer) {
     return (
-      <LiffCard className="mt-6 text-center">
-        <p className="text-lg font-bold">สวัสดีครับ{me?.displayName ? ` คุณ${me.displayName}` : ""}</p>
+      <LiffCard className="mt-6 flex flex-col items-center text-center">
+        <Mascot mood={me?.pendingApproval ? "p3" : "greet"} size={120} className="mb-3" />
+        <p className="text-lg font-bold">สวัสดีครับ{me?.displayName ? ` คุณ${me.displayName}` : ""} น้องติ๊กเองครับ</p>
         <p className="mt-2 text-sm text-zinc-600">
           {me?.pendingApproval ? "ได้รับคำขอแล้ว รอทีมงานอนุมัติสักครู่นะครับ" : "บัญชีนี้ยังไม่มีสิทธิ์แจ้งปัญหา ขอลิงก์เชิญจากทีมงานได้เลยครับ"}
         </p>
@@ -28,6 +30,10 @@ export function LiffHome() {
 
   return (
     <div className="space-y-6 pt-2">
+      <div className="flex items-center gap-3">
+        <Mascot mood="greet" size={64} />
+        <p className="font-bold">มีอะไรให้น้องติ๊กช่วยเหลือไหมครับ?</p>
+      </div>
       <Link href="/liff/new" className={primaryButton}>
         <Plus className="size-5" /> แจ้งปัญหาใหม่
       </Link>
@@ -44,7 +50,10 @@ function TicketGroup({ title, tickets, empty }: { title: string; tickets?: LiffT
       {!tickets ? (
         <div className="h-20 animate-pulse rounded-3xl bg-white/70" />
       ) : tickets.length === 0 ? (
-        <p className="rounded-3xl bg-white/60 px-4 py-6 text-center text-sm text-zinc-500">{empty}</p>
+        <p className="flex flex-col items-center gap-2 rounded-3xl bg-white/60 px-4 py-6 text-center text-sm text-zinc-500">
+          <Mascot mood="p4" size={72} />
+          {empty}
+        </p>
       ) : (
         <ul className="space-y-2">
           {tickets.map((t) => {

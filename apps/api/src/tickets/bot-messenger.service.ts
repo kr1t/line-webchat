@@ -2,12 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { HTTPFetchError, messagingApi } from '@line/bot-sdk';
 import { eq, sql } from 'drizzle-orm';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../config/env.js';
 import { DB, type Database } from '../db/database.module.js';
 import { lineUsers, messages } from '../db/schema.js';
 import { LINE_MESSAGING_CLIENT } from '../line/line.constants.js';
+import { mascotUrl, setMascotBase } from './ticket-messages.js';
 
-/** Automatic messages come from the bot persona, shown by LINE as the sender name. */
-export const BOT_SENDER: messagingApi.Sender = { name: 'น้องติ๊ก' };
+/** Automatic messages come from the bot persona, shown by LINE as the sender name (and picture). */
+export const BOT_NAME = 'น้องติ๊ก';
 
 export interface BotMessage {
   message: messagingApi.Message;
@@ -19,16 +22,24 @@ export interface BotMessage {
  * Sends automatic messages (ticket cards, prompts, notifications) and keeps a copy in the chat,
  * marked as sent by the system. Replies are free; pushes count against the OA's monthly quota.
  */
-const asBot = (item: BotMessage): messagingApi.Message => ({ ...item.message, sender: BOT_SENDER });
 
 @Injectable()
 export class BotMessengerService {
   private readonly logger = new Logger(BotMessengerService.name);
 
+  private readonly sender: messagingApi.Sender;
+
   constructor(
     @Inject(DB) private readonly db: Database,
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
-  ) {}
+    config: ConfigService<Env, true>,
+  ) {
+    setMascotBase(config.get('WEB_ORIGIN', { infer: true }));
+    const icon = mascotUrl('greet');
+    this.sender = icon ? { name: BOT_NAME, iconUrl: icon } : { name: BOT_NAME };
+  }
+
+  private asBot = (item: BotMessage): messagingApi.Message => ({ ...item.message, sender: this.sender });
 
   /**
    * Answers the customer's latest message or button press. The reply token is taken from the
@@ -38,7 +49,7 @@ export class BotMessengerService {
     const token = await this.takeToken(sourceMessageId);
     if (token) {
       try {
-        await this.line.replyMessage({ replyToken: token, messages: items.map(asBot) });
+        await this.line.replyMessage({ replyToken: token, messages: items.map(this.asBot) });
         await this.store(userId, items, { delivery: 'reply', error: null });
         return;
       } catch (error) {
@@ -55,7 +66,7 @@ export class BotMessengerService {
   /** Answers an event that is not stored as a chat message (e.g. someone adding the OA). */
   async replyToEvent(userId: string, replyToken: string, items: BotMessage[]): Promise<void> {
     try {
-      await this.line.replyMessage({ replyToken, messages: items.map(asBot) });
+      await this.line.replyMessage({ replyToken, messages: items.map(this.asBot) });
       await this.store(userId, items, { delivery: 'reply', error: null });
     } catch (error) {
       this.logger.warn(`Bot reply failed: ${(error as Error).message}`);
@@ -74,7 +85,7 @@ export class BotMessengerService {
       return false;
     }
     try {
-      await this.line.pushMessage({ to: userId, messages: items.map(asBot) }, randomUUID());
+      await this.line.pushMessage({ to: userId, messages: items.map(this.asBot) }, randomUUID());
       await this.store(userId, items, { delivery: 'push', error: null });
       return true;
     } catch (error) {

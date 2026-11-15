@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import type { Severity, TicketCategory } from "@/lib/types";
 import { primaryButton } from "./brand";
 import { ImagePicker, uploadImage } from "./image-picker";
+import { Mascot, type Mood } from "./mascot";
 import { LEVELS, type LiffTicket } from "./liff-data";
 import { liffFetch, useLiff } from "./liff-provider";
 
@@ -75,11 +76,11 @@ export function LiffNewTicket() {
                   selected ? "border-[#F2483A] ring-2 ring-[#F2483A]/30" : "border-[#1A1A1A]",
                 )}
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-xs font-extrabold text-white" style={{ background: level.color }}>
-                  {level.severity}
-                </span>
+                <Mascot mood={level.severity.toLowerCase() as Mood} size={60} />
                 <span className="min-w-0 flex-1">
-                  <span className="block font-bold">{level.label}</span>
+                  <span className="block font-bold">
+                    <span style={{ color: level.color }}>{level.severity}</span> {level.label}
+                  </span>
                   <span className="block text-sm">{level.hint}</span>
                   <span className="block text-xs text-zinc-500">{level.examples}</span>
                   <span className="mt-1 block text-xs font-semibold" style={{ color: level.color }}>

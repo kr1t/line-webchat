@@ -97,4 +97,15 @@ describe('Pictures, video and files in the admin chat (e2e)', () => {
     await postWebhook(app, [user.image()]);
     expect((await latest()).payload).toMatchObject({ media: 'unavailable' });
   });
+
+  it('fetches pictures that arrived before media was copied, on first view', async () => {
+    const [old] = await db
+      .insert(messages)
+      .values({ userId: USER, direction: 'in', type: 'image', lineMessageId: 'old-line-id', payload: { contentProvider: { type: 'line' } } })
+      .returning();
+    const res = await media(old.id);
+    expect(res.statusCode).toBe(200);
+    expect(line.getMessageContentWithHttpInfo).toHaveBeenCalledWith('old-line-id');
+    expect(await db.select().from(messageMedia).where(eq(messageMedia.messageId, old.id))).toHaveLength(1);
+  });
 });

@@ -81,6 +81,26 @@ export class MediaService {
   }
 
   async file(userId: string, messageId: string) {
+    let row = await this.find(userId, messageId);
+    if (!row) {
+      // Older messages (or a failed copy): try LINE once more while it still has the content
+      const [message] = await this.db
+        .select({ type: messages.type, lineMessageId: messages.lineMessageId, direction: messages.direction, payload: messages.payload })
+        .from(messages)
+        .where(and(eq(messages.id, messageId), eq(messages.userId, userId)))
+        .limit(1);
+      const tooLarge = message?.payload?.media === 'too_large';
+      if (message?.direction === 'in' && message.lineMessageId && MEDIA_TYPES.has(message.type) && !tooLarge) {
+        if ((await this.capture(messageId, message.lineMessageId)) === 'stored') row = await this.find(userId, messageId);
+      }
+    }
+    if (!row) throw new NotFoundException();
+    const { contentType, inline } = servingType(row.type, row.contentType, row.data);
+    const fallback = `${row.type}-${messageId.slice(0, 8)}`;
+    return { contentType, inline, data: row.data, fileName: safeFileName(row.payload?.fileName, fallback) };
+  }
+
+  private async find(userId: string, messageId: string) {
     const [row] = await this.db
       .select({
         type: messages.type,
@@ -92,9 +112,6 @@ export class MediaService {
       .innerJoin(messages, eq(messages.id, messageMedia.messageId))
       .where(and(eq(messages.id, messageId), eq(messages.userId, userId)))
       .limit(1);
-    if (!row) throw new NotFoundException();
-    const { contentType, inline } = servingType(row.type, row.contentType, row.data);
-    const fallback = `${row.type}-${messageId.slice(0, 8)}`;
-    return { contentType, inline, data: row.data, fileName: safeFileName(row.payload?.fileName, fallback) };
+    return row ?? null;
   }
 }

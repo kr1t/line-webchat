@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { Download, File, MapPin } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
@@ -10,11 +13,15 @@ const NOTES: Record<string, string> = {
   unavailable: "ดึงไฟล์จาก LINE ไม่ได้ (อาจหมดอายุแล้ว)",
 };
 
-/** Picture, video, audio, file or location sent by the customer, shown right in the chat. */
+/**
+ * Picture, video, audio, file or location sent by the customer, shown right in the chat.
+ * Messages from before media was copied have no state; the API then fetches them from LINE on first view.
+ */
 export function MediaContent({ message, userId }: { message: ChatMessage; userId: string }) {
   const payload = message.payload ?? {};
   const src = `/api/conversations/${userId}/messages/${message.id}/media`;
-  const state = typeof payload.media === "string" ? payload.media : null;
+  const [failed, setFailed] = useState(false);
+  const state = failed ? "unavailable" : typeof payload.media === "string" ? payload.media : null;
 
   if (message.type === "location") {
     const { latitude, longitude, title, address } = payload as { latitude?: number; longitude?: number; title?: string; address?: string };
@@ -38,21 +45,27 @@ export function MediaContent({ message, userId }: { message: ChatMessage; userId
     );
   }
 
-  if (state !== "stored") {
-    return <p className="text-sm opacity-80">{NOTES[state ?? ""] ?? "กำลังดึงไฟล์จาก LINE…"}</p>;
-  }
+  if (state === "too_large" || state === "unavailable") return <p className="text-sm opacity-80">{NOTES[state]}</p>;
 
   switch (message.type) {
     case "image":
       return (
         <a href={src} target="_blank" rel="noreferrer" className="block">
-          <Image src={src} alt="รูปจากลูกค้า" width={240} height={240} unoptimized className="h-auto max-h-72 w-60 rounded-xl object-cover" />
+          <Image
+            src={src}
+            alt="รูปจากลูกค้า"
+            width={240}
+            height={240}
+            unoptimized
+            onError={() => setFailed(true)}
+            className="h-auto max-h-72 w-60 rounded-xl object-cover"
+          />
         </a>
       );
     case "video":
-      return <video src={src} controls preload="metadata" className="max-h-72 w-64 rounded-xl bg-black" />;
+      return <video src={src} controls preload="metadata" onError={() => setFailed(true)} className="max-h-72 w-64 rounded-xl bg-black" />;
     case "audio":
-      return <audio src={src} controls preload="metadata" className="w-60" />;
+      return <audio src={src} controls preload="metadata" onError={() => setFailed(true)} className="w-60" />;
     default:
       return (
         <a href={src} download className="flex items-center gap-2">

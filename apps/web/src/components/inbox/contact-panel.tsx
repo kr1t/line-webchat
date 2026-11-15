@@ -4,6 +4,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import { BadgeCheck, X } from "lucide-react";
 import { useStepUp } from "@/components/admins/step-up";
+import { CreateInviteDialog } from "@/components/settings/invites";
 import Link from "next/link";
 import useSWR from "swr";
 import { SeverityBadge, TicketStatusBadge } from "@/components/tickets/badges";
@@ -76,6 +77,7 @@ function CustomerAccess({ conversation: c, onChanged }: { conversation: Conversa
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const isCustomer = c.role === "CUSTOMER";
+  const [inviting, setInviting] = useState(false);
 
   const toggle = async () => {
     setBusy(true);
@@ -121,6 +123,12 @@ function CustomerAccess({ conversation: c, onChanged }: { conversation: Conversa
         </button>
       </div>
       {note && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">{note}</p>}
+      {!isCustomer && (
+        <button onClick={() => setInviting(true)} className="mt-3 text-xs text-muted underline underline-offset-2 hover:text-foreground">
+          หรือส่งลิงก์เชิญให้ลูกค้ากดยืนยันเอง
+        </button>
+      )}
+      <CreateInviteDialog open={inviting} onClose={() => setInviting(false)} target={{ userId: c.userId, name: c.displayName }} />
     </section>
   );
 }

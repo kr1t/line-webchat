@@ -30,7 +30,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Invite links carry a token in the URL; never send it on as a referrer
+      { source: "/liff/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+    ];
   },
   // Same-origin proxy to the API so auth cookies stay first-party
   async rewrites() {

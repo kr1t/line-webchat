@@ -221,3 +221,17 @@ export interface QuotaInfo {
   remaining: number | null;
   checkedAt: string;
 }
+
+export interface RoleInvite {
+  id: string;
+  status: "unused" | "pending_approval" | "granted" | "expired" | "revoked";
+  targetUserId: string | null;
+  targetName: string | null;
+  requireApproval: boolean;
+  expiresAt: string;
+  usedAt: string | null;
+  usedByUserId: string | null;
+  usedByName: string | null;
+  createdByName: string | null;
+  createdAt: string;
+}

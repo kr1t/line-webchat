@@ -5,7 +5,9 @@ import useSWR from "swr";
 import clsx from "clsx";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { buttonClass, FormError, inputClass } from "@/components/auth/auth-card";
+import { StepUpProvider } from "@/components/admins/step-up";
 import { Dialog } from "@/components/ui/dialog";
+import { InvitesSection } from "./invites";
 import { del, fetcher, patch, post, put, RequestError } from "@/lib/fetcher";
 import type { AdminProfile, BusinessHours, CannedResponse } from "@/lib/types";
 
@@ -22,14 +24,17 @@ export function SettingsView({
   initialCanned: CannedResponse[];
 }) {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-6 md:px-8 md:py-8">
-      <header>
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted">เวลาทำการ และข้อความที่ทีมใช้บ่อย</p>
-      </header>
-      <BusinessHoursForm initial={initialHours} canEdit={me.role === "SUPER_ADMIN"} />
-      <CannedList initial={initialCanned} />
-    </div>
+    <StepUpProvider>
+      <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-6 md:px-8 md:py-8">
+        <header>
+          <h1 className="text-xl font-semibold">Settings</h1>
+          <p className="text-sm text-muted">เวลาทำการ ลิงก์เชิญลูกค้า และข้อความที่ทีมใช้บ่อย</p>
+        </header>
+        <BusinessHoursForm initial={initialHours} canEdit={me.role === "SUPER_ADMIN"} />
+        <InvitesSection />
+        <CannedList initial={initialCanned} />
+      </div>
+    </StepUpProvider>
   );
 }
 

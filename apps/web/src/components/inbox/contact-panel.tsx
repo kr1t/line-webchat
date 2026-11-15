@@ -4,10 +4,13 @@ import { useState } from "react";
 import clsx from "clsx";
 import { BadgeCheck, X } from "lucide-react";
 import { useStepUp } from "@/components/admins/step-up";
-import { put, RequestError } from "@/lib/fetcher";
+import Link from "next/link";
+import useSWR from "swr";
+import { SeverityBadge, TicketStatusBadge } from "@/components/tickets/badges";
+import { fetcher, put, RequestError } from "@/lib/fetcher";
 import { Avatar } from "@/components/avatar";
 import { displayName, formatFullDate } from "@/lib/format";
-import type { AdminProfile, ConversationDetail } from "@/lib/types";
+import type { AdminProfile, ConversationDetail, TicketListItem } from "@/lib/types";
 
 interface ContactPanelProps {
   conversation: ConversationDetail;
@@ -44,6 +47,7 @@ export function ContactPanel({ conversation: c, open, onClose, onChanged }: Cont
         </span>
       </div>
       <CustomerAccess conversation={c} onChanged={onChanged} />
+      <CustomerTickets userId={c.userId} />
       <dl className="space-y-4 border-t border-border px-6 py-5 text-sm">
         <div>
           <dt className="text-muted">แชทครั้งแรก</dt>
@@ -117,6 +121,34 @@ function CustomerAccess({ conversation: c, onChanged }: { conversation: Conversa
         </button>
       </div>
       {note && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">{note}</p>}
+    </section>
+  );
+}
+
+function CustomerTickets({ userId }: { userId: string }) {
+  const { data } = useSWR<TicketListItem[]>(`/tickets?status=all&reporterId=${userId}&limit=10`, fetcher, {
+    refreshInterval: 15_000,
+  });
+  if (!data?.length) return null;
+  return (
+    <section className="border-t border-border px-6 py-5 text-sm">
+      <p className="mb-2 font-medium">Tickets</p>
+      <ul className="space-y-1.5">
+        {data.map((t) => (
+          <li key={t.id}>
+            <Link href={`/tickets/${t.id}`} className="block rounded-lg p-2 hover:bg-zinc-50">
+              <div className="flex items-center gap-1.5">
+                <SeverityBadge severity={t.severity} />
+                <span className="font-mono text-xs text-muted">{t.code}</span>
+              </div>
+              <p className="mt-1 truncate">{t.title}</p>
+              <div className="mt-1">
+                <TicketStatusBadge status={t.status} />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

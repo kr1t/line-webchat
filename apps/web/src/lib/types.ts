@@ -98,3 +98,72 @@ export interface AuditEntry {
   ip: string | null;
   createdAt: string;
 }
+
+export type Severity = "P1" | "P2" | "P3" | "P4" | "P5";
+export type TicketStatus = "open" | "acknowledged" | "in_progress" | "waiting_customer" | "resolved" | "closed";
+export type TicketCategory = "login" | "payment" | "data" | "ui" | "other";
+export type DeadlineState = "ok" | "at_risk" | "breached" | "met" | "none";
+
+export interface TicketListItem {
+  id: string;
+  code: string;
+  number: number;
+  title: string;
+  category: TicketCategory;
+  severity: Severity;
+  reportedSeverity: Severity;
+  status: TicketStatus;
+  reporter: { userId: string; displayName: string | null; pictureUrl: string | null };
+  assigneeId: string | null;
+  assigneeName: string | null;
+  createdAt: string;
+  firstResponseAt: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  rating: number | null;
+  sla: {
+    response: DeadlineState;
+    resolve: DeadlineState;
+    current: "ok" | "at_risk" | "breached" | null;
+    responseDueAt: string | null;
+    resolveDueAt: string | null;
+    paused: boolean;
+  };
+}
+
+export interface TicketMessage {
+  id: string;
+  authorType: "customer" | "admin" | "system";
+  authorName: string | null;
+  body: string;
+  internal: boolean;
+  status: "sending" | "sent" | "failed" | null;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface TicketEvent {
+  id: string;
+  type: string;
+  fromValue: string | null;
+  toValue: string | null;
+  reason: string | null;
+  actorName: string | null;
+  createdAt: string;
+}
+
+export interface TicketDetail extends TicketListItem {
+  description: string;
+  reporterFollowing: boolean;
+  ratingComment: string | null;
+  messages: TicketMessage[];
+  events: TicketEvent[];
+}
+
+export interface TicketCounts {
+  active: number;
+  unassigned: number;
+  mine: number;
+  breached: number;
+  urgent: number;
+}

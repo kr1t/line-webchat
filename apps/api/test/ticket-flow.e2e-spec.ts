@@ -206,7 +206,29 @@ describe('Reporting tickets in the LINE chat (e2e)', () => {
     await db.update(tickets).set({ status: 'resolved', resolvedAt: new Date() }).where(eq(tickets.id, ticket.id));
     await send(customer.postback(`a=reopen&t=${ticket.id}`));
     const [after] = await db.select().from(tickets).where(eq(tickets.id, ticket.id));
-    expect(after).toMatchObject({ status: 'in_progress', resolvedAt: null });
+    expect(after).toMatchObject({ status: 'in_progress', resolvedAt: null, reopenCount: 1 });
+    expect(after.reopenedAt).not.toBeNull();
+
+    // The team sees it clearly: a line in the thread, one in the chat, and the reason on the history
+    const notes = await db.select().from(ticketMessages).where(eq(ticketMessages.ticketId, ticket.id));
+    expect(notes).toContainEqual(expect.objectContaining({ authorType: 'system', body: expect.stringContaining('ยังไม่หาย') }));
+    const chat = await db.select().from(conversationEvents).where(eq(conversationEvents.userId, CUSTOMER));
+    expect(chat.map((e) => e.type)).toContain('ticket_reopened');
+
+    // น้องติ๊ก asks what is still wrong, and the answer lands on the ticket
+    expect(lastReplyText()).toContain('ยังเจออะไรอยู่');
+    await send(customer.text('ยังขึ้น error เดิมตอนกดจ่าย'));
+    const more = await db.select().from(ticketMessages).where(eq(ticketMessages.ticketId, ticket.id));
+    expect(more.map((m) => m.body)).toContain('ยังขึ้น error เดิมตอนกดจ่าย');
+  });
+
+  it('notes when the customer confirms the fix', async () => {
+    const ticket = await report('P4', 'ปุ่มเพี้ยน');
+    await send(customer.postback('a=finish'));
+    await db.update(tickets).set({ status: 'resolved', resolvedAt: new Date() }).where(eq(tickets.id, ticket.id));
+    await send(customer.postback(`a=done&t=${ticket.id}`));
+    const notes = await db.select().from(ticketMessages).where(eq(ticketMessages.ticketId, ticket.id));
+    expect(notes).toContainEqual(expect.objectContaining({ authorType: 'system', body: expect.stringContaining('ยืนยันว่าหายแล้ว') }));
   });
 
   it('keeps adding pictures and details to the new ticket until the customer says done', async () => {

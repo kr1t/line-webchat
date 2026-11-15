@@ -144,6 +144,13 @@ export function LiffTicket({ id }: { id: string }) {
 
       <section className="space-y-3">
         {t.messages.map((m) => {
+          if (m.from === "system") {
+            return (
+              <p key={m.id} className="text-center text-xs font-semibold text-zinc-500">
+                {m.body.replace("ลูกค้า", "คุณ")}
+              </p>
+            );
+          }
           const mine = m.from === "customer";
           return (
             <div key={m.id} className={clsx("flex flex-col", mine ? "items-end" : "items-start")}>

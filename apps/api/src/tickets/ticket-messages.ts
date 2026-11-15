@@ -348,7 +348,11 @@ export const moreInfoSaved = (ticket: TicketCard) =>
 export const doneAdding = () => text('เรียบร้อยครับ ทีมจะติดต่อกลับในแชทนี้ 🙏', 'จบการเพิ่มข้อมูล');
 
 export const reopened = (ticket: TicketCard) =>
-  text(`เปิด ${ticketCode(ticket.number)} อีกครั้งแล้ว ทีมจะตามต่อให้ครับ`, `เปิด ${ticketCode(ticket.number)} อีกครั้ง`);
+  text(
+    `ส่ง ${ticketCode(ticket.number)} กลับให้ทีมแก้ต่อแล้วครับ 🙏\nบอกน้องติ๊กได้ไหมว่ายังเจออะไรอยู่ ส่งรูปหน้าจอมาได้ด้วย แล้วกด "เสร็จแล้ว"`,
+    `ส่ง ${ticketCode(ticket.number)} กลับให้ทีม และถามว่ายังเจออะไร`,
+    addingReplies(),
+  );
 
 export function askRating(ticket: TicketCard): BotMessage {
   const faces = ['😞', '🙁', '😐', '🙂', '😄'];

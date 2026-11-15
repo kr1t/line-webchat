@@ -62,13 +62,23 @@ export const DEADLINE_LABELS: Record<DeadlineState, string> = {
   none: "ไม่มีกำหนด",
 };
 
-export const TICKET_EVENT_TEXT = (e: { type: string; fromValue: string | null; toValue: string | null; actorName: string | null }) => {
+export const TICKET_EVENT_TEXT = (e: {
+  type: string;
+  fromValue: string | null;
+  toValue: string | null;
+  reason?: string | null;
+  actorName: string | null;
+}) => {
   const actor = e.actorName ?? "ลูกค้า";
   switch (e.type) {
     case "created":
       return `ลูกค้าแจ้งเรื่อง (${e.toValue})`;
     case "status":
-      return `${e.actorName ?? "ลูกค้า"} เปลี่ยนสถานะเป็น "${STATUS_LABELS[e.toValue as TicketStatus] ?? e.toValue}"`;
+      // What the customer decided reads as a decision, not a status change
+      if (e.reason === "customer_reopened") return "↩️ ลูกค้าแจ้งว่ายังไม่หาย ส่งกลับให้ทีมแก้ใหม่";
+      if (e.reason === "customer_confirmed") return "✅ ลูกค้ายืนยันว่าหายแล้ว ปิดเรื่อง";
+      if (e.reason === "first_reply") return `${actor} ตอบลูกค้าครั้งแรก`;
+      return `${actor} เปลี่ยนสถานะเป็น "${STATUS_LABELS[e.toValue as TicketStatus] ?? e.toValue}"`;
     case "severity":
       return `${actor} เปลี่ยนระดับ ${e.fromValue ?? ""} → ${e.toValue}`;
     case "assignee":

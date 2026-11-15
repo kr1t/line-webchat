@@ -92,6 +92,10 @@ export function conversationEventText(event: {
       return `${actor} ให้สิทธิ์ลูกค้า`;
     case "role_revoked":
       return `${actor} ถอนสิทธิ์ลูกค้า`;
+    case "ticket_reopened":
+      return `ลูกค้าแจ้งว่า ${typeof data.code === "string" ? data.code : "ticket"} ยังไม่หาย ส่งกลับให้ทีมแก้ใหม่`;
+    case "ticket_confirmed":
+      return `ลูกค้ายืนยันว่า ${typeof data.code === "string" ? data.code : "ticket"} หายแล้ว`;
     case "ticket_created":
       return `สร้าง ticket ${typeof data.code === "string" ? data.code : ""}${typeof data.severity === "string" ? ` (${data.severity})` : ""}`;
     default:

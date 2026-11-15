@@ -146,6 +146,8 @@ export class CustomerFlowService {
         const ticket = await this.ownTicket(userId, params);
         if (!ticket || ticket.status !== 'resolved') return reply(say.staleAction());
         await this.tickets.customerReopen(ticket);
+        // What is still wrong is the most useful thing the team can get now
+        await this.setState(userId, { step: 'await_more_info', ticketId: ticket.id });
         return reply(say.reopened(card(ticket)));
       }
 

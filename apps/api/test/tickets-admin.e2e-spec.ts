@@ -81,7 +81,7 @@ describe('Tickets in the CMS (e2e)', () => {
     expect(breached.json<{ id: string }[]>().map((t) => t.id)).toEqual([late.id]);
 
     const counts = await asNok({ method: 'GET', url: '/tickets/counts' });
-    expect(counts.json()).toEqual({ active: 2, unassigned: 2, mine: 0, breached: 1, urgent: 1 });
+    expect(counts.json()).toEqual({ active: 2, unassigned: 2, mine: 0, breached: 1, urgent: 1, reopened: 0 });
   });
 
   it('filters by assignee, severity and text, including ticket codes', async () => {
@@ -203,5 +203,13 @@ describe('Tickets in the CMS (e2e)', () => {
   it('returns 404 for unknown tickets and 400 for bad ids', async () => {
     expect((await asNok({ method: 'GET', url: '/tickets/00000000-0000-4000-8000-000000000000' })).statusCode).toBe(404);
     expect((await asNok({ method: 'GET', url: '/tickets/123' })).statusCode).toBe(400);
+  });
+
+  it('lists tickets the customer sent back as not fixed', async () => {
+    const back = await ticket({ status: 'in_progress', reopenCount: 2, reopenedAt: new Date() });
+    await ticket();
+    const res = await asNok({ method: 'GET', url: '/tickets?reopened=1' });
+    expect(res.json()).toEqual([expect.objectContaining({ id: back.id, reopenCount: 2 })]);
+    expect((await asNok({ method: 'GET', url: '/tickets/counts' })).json()).toMatchObject({ reopened: 1 });
   });
 });

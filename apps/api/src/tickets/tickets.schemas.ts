@@ -12,6 +12,8 @@ export const listTicketsQuery = z
     severity: z.enum(SEVERITIES).optional(),
     assignee: z.union([z.enum(['me', 'unassigned']), z.uuid()]).optional(),
     sla: z.enum(['breached', 'at_risk']).optional(),
+    // Tickets the customer sent back with "ยังไม่หาย"
+    reopened: z.enum(['1']).optional(),
     reporterId: z.string().regex(/^U[0-9a-f]{32}$/).optional(),
     category: z.enum(CATEGORIES).optional(),
     q: z.string().trim().max(100).optional(),

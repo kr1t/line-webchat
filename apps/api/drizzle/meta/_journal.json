@@ -43,6 +43,13 @@
       "when": 1794744994303,
       "tag": "0005_message_media",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794747470609,
+      "tag": "0006_ticket_reopens",
+      "breakpoints": true
     }
   ]
 }

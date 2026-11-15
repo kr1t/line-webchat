@@ -41,7 +41,16 @@ export interface ConversationCounts {
 
 export interface ConversationEvent {
   id: string;
-  type: "claimed" | "transferred" | "closed" | "reopened" | "role_granted" | "role_revoked" | "ticket_created";
+  type:
+    | "claimed"
+    | "transferred"
+    | "closed"
+    | "reopened"
+    | "role_granted"
+    | "role_revoked"
+    | "ticket_created"
+    | "ticket_reopened"
+    | "ticket_confirmed";
   data: Record<string, unknown> | null;
   actorName: string | null;
   createdAt: string;
@@ -121,6 +130,8 @@ export interface TicketListItem {
   resolvedAt: string | null;
   closedAt: string | null;
   rating: number | null;
+  reopenCount: number;
+  reopenedAt: string | null;
   sla: {
     response: DeadlineState;
     resolve: DeadlineState;
@@ -167,6 +178,7 @@ export interface TicketCounts {
   mine: number;
   breached: number;
   urgent: number;
+  reopened: number;
 }
 
 export interface CannedResponse {

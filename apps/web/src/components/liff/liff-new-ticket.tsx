@@ -24,7 +24,11 @@ const fieldClass = "w-full rounded-2xl border-2 border-[#1A1A1A] bg-white px-4 p
 export function LiffNewTicket() {
   const router = useRouter();
   const { me } = useLiff();
-  const [severity, setSeverity] = useState<Severity | null>(null);
+  // The chat carousel links here with ?severity=P3 when a level was already picked
+  const [severity, setSeverity] = useState<Severity | null>(() => {
+    const v = new URLSearchParams(window.location.search).get("severity");
+    return LEVELS.some((l) => l.severity === v) ? (v as Severity) : null;
+  });
   const [category, setCategory] = useState<TicketCategory>("other");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

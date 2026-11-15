@@ -94,14 +94,14 @@ export const QrPoster = forwardRef<SVGSVGElement, { url: string; handle: string;
     ${confetti.map(([x, y, f]) => `<circle cx="${x}" cy="${y}" r="12" fill="${f}"/>`).join("")}
     ${stars.map((s) => { const [d, f] = s.split("|"); return `<path d="${d}" fill="${f}" stroke="${INK}" stroke-width="4"/>`; }).join("")}
     <path d="${scallopPath(110, 300, 860, 935)}" fill="#FFFFFF" stroke="${INK}" stroke-width="10" stroke-linejoin="round"/>
-    <circle cx="${POSTER_W / 2}" cy="250" r="130" fill="${PINK}" stroke="${INK}" stroke-width="10"/>
-    <clipPath id="badge"><circle cx="${POSTER_W / 2}" cy="250" r="124"/></clipPath>
-    <image href="${mascotSrc}" x="${POSTER_W / 2 - 150}" y="100" width="300" height="300" clip-path="url(#badge)"/>
+    <circle cx="${POSTER_W / 2}" cy="212" r="116" fill="${PINK}" stroke="${INK}" stroke-width="10"/>
+    <clipPath id="badge"><circle cx="${POSTER_W / 2}" cy="212" r="110"/></clipPath>
+    <image href="${mascotSrc}" x="${POSTER_W / 2 - 134}" y="78" width="268" height="268" clip-path="url(#badge)"/>
     <g>
       <path d="M 700 120 h 260 a 36 36 0 0 1 36 36 v 70 a 36 36 0 0 1 -36 36 h -190 l -46 40 v -40 h -24 a 36 36 0 0 1 -36 -36 v -70 a 36 36 0 0 1 36 -36 z" fill="${RED}" stroke="${INK}" stroke-width="7"/>
       <text x="830" y="205" font-size="44" font-weight="800" fill="#fff" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">แอดเพื่อนกัน!</text>
     </g>
-    <text x="${POSTER_W / 2}" y="424" font-size="50" font-weight="800" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">สแกนคุยกับน้องติ๊ก</text>
+    <text x="${POSTER_W / 2}" y="430" font-size="48" font-weight="800" fill="${INK}" text-anchor="middle" font-family="IBM Plex Sans Thai, Sukhumvit Set, Thonburi, sans-serif">สแกนคุยกับน้องติ๊ก</text>
     <rect x="${qx - 26}" y="${qy - 26}" width="${box + 52}" height="${box + 52}" rx="44" fill="${CREAM}" stroke="${INK}" stroke-width="6" stroke-dasharray="2 16" stroke-linecap="round"/>
     <g fill="${INK}">${dots.join("")}</g>
     ${finders.join("")}

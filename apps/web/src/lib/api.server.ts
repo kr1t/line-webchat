@@ -13,12 +13,13 @@ export class ApiError extends Error {
  * Never cached (chat data is per-request); a 401 sends the visitor to the login page.
  */
 export async function apiGet<T>(path: string, { redirectOn401 = true } = {}): Promise<T> {
+  const cookie = (await cookies()).toString();
   const baseUrl = process.env.API_URL;
   if (!baseUrl) throw new Error("API_URL is not set");
 
   const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
     cache: "no-store",
-    headers: { accept: "application/json", cookie: (await cookies()).toString() },
+    headers: { accept: "application/json", cookie },
   });
   if (res.status === 401 && redirectOn401) redirect("/login");
   if (!res.ok) throw new ApiError(res.status);

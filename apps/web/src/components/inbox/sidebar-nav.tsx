@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import clsx from "clsx";
-import { LayoutDashboard, MessageCircle, Search, Settings, Ticket, Users } from "lucide-react";
+import { LayoutDashboard, MessageCircle, QrCode, Search, Settings, Ticket, Users } from "lucide-react";
 import { CommandPalette } from "@/components/search/command-palette";
 import { fetcher } from "@/lib/fetcher";
 import type { TicketCounts } from "@/lib/types";
@@ -22,6 +22,7 @@ export function SidebarNav({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     { href: "/inbox", label: "กล่องข้อความ", icon: MessageCircle },
     { href: "/tickets", label: "Tickets", icon: Ticket },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/share", label: "แชร์ QR", icon: QrCode },
     { href: "/settings", label: "Settings", icon: Settings },
     ...(isSuperAdmin ? [{ href: "/admins", label: "แอดมิน", icon: Users }] : []),
   ];

@@ -25,6 +25,7 @@ import {
 import type { AdminProfile, Severity, TeamMember, TicketCategory, TicketDetail as Detail, TicketStatus } from "@/lib/types";
 import { CannedPicker } from "@/components/canned/canned-picker";
 import { ReopenedBadge, SeverityBadge, SlaBadge, TicketStatusBadge } from "./badges";
+import { StatusConfirm } from "./status-confirm";
 import { TICKETS_KEY_PREFIX } from "./ticket-list";
 
 const selectClass =
@@ -36,6 +37,7 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
   const { mutate: globalMutate } = useSWRConfig();
   const [error, setError] = useState<string | null>(null);
   const [severityDraft, setSeverityDraft] = useState<Severity | null>(null);
+  const [statusDraft, setStatusDraft] = useState<TicketStatus | null>(null);
   const now = useNow();
 
   const apply = async (request: Promise<Detail>) => {
@@ -113,8 +115,11 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
           <Field label="สถานะ">
             <select
               className={selectClass}
-              value={ticket.status}
-              onChange={(e) => update({ status: e.target.value as TicketStatus })}
+              value={statusDraft ?? ticket.status}
+              onChange={(e) => {
+                const next = e.target.value as TicketStatus;
+                if (next !== ticket.status) setStatusDraft(next);
+              }}
             >
               {TICKET_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -196,6 +201,17 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
           </ol>
         </section>
       </aside>
+
+      <StatusConfirm
+        key={statusDraft ?? "idle"}
+        from={ticket.status}
+        to={statusDraft}
+        onCancel={() => setStatusDraft(null)}
+        onConfirm={(status) => {
+          setStatusDraft(null);
+          void update({ status });
+        }}
+      />
 
       <SeverityDialog
         draft={severityDraft}

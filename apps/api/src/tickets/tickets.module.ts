@@ -3,6 +3,7 @@ import { ConversationsModule } from '../conversations/conversations.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { InboxModule } from '../inbox/inbox.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
+import { AttachmentsService } from './attachments.service.js';
 import { BotMessengerService } from './bot-messenger.service.js';
 import { CustomerFlowService } from './customer-flow.service.js';
 import { QuotaService } from './quota.service.js';
@@ -13,7 +14,7 @@ import { TicketsService } from './tickets.service.js';
 @Module({
   imports: [AuthModule, ConversationsModule, InboxModule, SettingsModule],
   controllers: [TicketsController],
-  providers: [TicketsService, BotMessengerService, CustomerFlowService, QuotaService, TicketsAdminService],
-  exports: [TicketsService, BotMessengerService, CustomerFlowService, QuotaService],
+  providers: [TicketsService, BotMessengerService, CustomerFlowService, QuotaService, TicketsAdminService, AttachmentsService],
+  exports: [TicketsService, BotMessengerService, CustomerFlowService, QuotaService, AttachmentsService],
 })
 export class TicketsModule {}

@@ -137,8 +137,21 @@ export function askDescription(severity: Severity): BotMessage {
 }
 
 export function textOnlyPlease(): BotMessage {
-  return text('ตอนนี้รับเฉพาะข้อความครับ พิมพ์อธิบายปัญหาได้เลย', 'ขอให้พิมพ์เป็นข้อความ', quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')));
+  return text('รับข้อความกับรูปภาพครับ พิมพ์อธิบายปัญหาได้เลย', 'ขอให้พิมพ์เป็นข้อความ', quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')));
 }
+
+export const imageReceived = () =>
+  text(
+    '📎 ได้รับรูปแล้ว ส่งเพิ่มได้ (สูงสุด 10 รูป รูปละไม่เกิน 5 MB)\nแล้วพิมพ์อธิบายปัญหาเพื่อส่งเรื่องได้เลยครับ',
+    'ได้รับรูป',
+    quickReply(postback('ยกเลิก', 'a=cancel', 'ยกเลิก')),
+  );
+
+export const imageRejected = () =>
+  text('รับรูปนี้ไม่ได้ครับ (รูปละไม่เกิน 5 MB และไม่เกิน 10 รูปต่อเรื่อง)', 'รับรูปไม่ได้');
+
+export const imagesAdded = (ticket: TicketCard) =>
+  text(`📎 แนบรูปใน ${ticketCode(ticket.number)} แล้ว ส่งเพิ่มหรือพิมพ์ข้อความต่อได้เลยครับ`, `แนบรูปใน ${ticketCode(ticket.number)}`);
 
 export function pickFromCards(): BotMessage {
   return text(
@@ -148,7 +161,7 @@ export function pickFromCards(): BotMessage {
   );
 }
 
-export function ticketCreated(ticket: TicketCard, afterHoursNote?: string | null): BotMessage {
+export function ticketCreated(ticket: TicketCard, afterHoursNote?: string | null, imageCount = 0): BotMessage {
   const info = SLA[ticket.severity];
   const flex: Flex = {
     type: 'flex',
@@ -169,6 +182,7 @@ export function ticketCreated(ticket: TicketCard, afterHoursNote?: string | null
           { type: 'separator', margin: 'md' },
           row('ระดับ', `${info.emoji} ${severityName(ticket.severity)}`, info.color),
           row('สถานะ', STATUS_LABELS[ticket.status]),
+          ...(imageCount > 0 ? [row('รูปแนบ', `${imageCount} รูป`)] : []),
           {
             type: 'text',
             text: afterHoursNote ?? `ทีมจะตอบกลับภายใน ${durationText(info.responseMinutes)}`,

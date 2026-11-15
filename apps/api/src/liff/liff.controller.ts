@@ -6,6 +6,7 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { DB, type Database } from '../db/database.module.js';
 import { lineUsers } from '../db/schema.js';
 import { ticketIdSchema } from '../tickets/tickets.schemas.js';
+import { sendImage } from '../tickets/send-image.js';
 import { InvitesService } from './invites.service.js';
 import { LiffGuard, type LiffRequest } from './liff.guard.js';
 import { LINE_ID_TOKEN_VERIFIER, type LineIdTokenVerifier } from './liff.constants.js';
@@ -97,6 +98,24 @@ export class LiffController {
     @Body(new ZodValidationPipe(customerMessageBody)) body: CustomerMessageBody,
   ) {
     return this.tickets.addMessage(uid(req), id, body.body);
+  }
+
+  /** One picture per request, sent as the raw body (image/jpeg, png, webp or gif). */
+  @UseGuards(LiffGuard)
+  @Post('tickets/:id/attachments')
+  addImage(@Req() req: LiffRequest, @Param('id', TicketIdPipe) id: string, @Body() body: unknown) {
+    return this.tickets.addImage(uid(req), id, body);
+  }
+
+  @UseGuards(LiffGuard)
+  @Get('tickets/:id/attachments/:attachmentId')
+  async image(
+    @Req() req: LiffRequest,
+    @Param('id', TicketIdPipe) id: string,
+    @Param('attachmentId', TicketIdPipe) attachmentId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    return sendImage(reply, await this.tickets.image(uid(req), id, attachmentId));
   }
 
   @UseGuards(LiffGuard)

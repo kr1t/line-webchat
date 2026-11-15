@@ -1,4 +1,5 @@
 import { createHmac, randomBytes } from 'node:crypto';
+import { Readable } from 'node:stream';
 import { Test } from '@nestjs/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { sql } from 'drizzle-orm';
@@ -23,7 +24,11 @@ export interface LineClientMock {
   deleteRichMenu: ReturnType<typeof vi.fn>;
   linkRichMenuIdToUsers: ReturnType<typeof vi.fn>;
   setRichMenuImage: ReturnType<typeof vi.fn>;
+  getMessageContent: ReturnType<typeof vi.fn>;
 }
+
+/** Smallest bytes that look like a JPEG to the sniffer. */
+export const FAKE_JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 1)]);
 
 export function createLineClientMock(): LineClientMock {
   return {
@@ -44,6 +49,7 @@ export function createLineClientMock(): LineClientMock {
     linkRichMenuIdToUsers: vi.fn(async () => ({})),
     // Lives on the blob client in the SDK; one mock object serves both here
     setRichMenuImage: vi.fn(async () => ({})),
+    getMessageContent: vi.fn(async () => Readable.from([FAKE_JPEG])),
   };
 }
 
@@ -143,6 +149,10 @@ export function lineEvents(userId: string) {
       };
     },
     postback: (data: string) => ({ ...base(), type: 'postback', postback: { data } }),
+    image: () => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `img-${process.pid}-${eventSeq}`, type: 'image', contentProvider: { type: 'line' } } };
+    },
   };
 }
 

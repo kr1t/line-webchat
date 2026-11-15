@@ -81,7 +81,14 @@ export class LineWebhookService {
       .where(eq(lineUsers.userId, userId));
     await this.status.reopenIfClosed(userId);
 
-    const handled = await this.flow.onMessage(userId, { messageId: inserted[0].id, type: content.type, text: content.text });
+    const lineImageId =
+      event.message.type === 'image' && event.message.contentProvider?.type === 'line' ? event.message.id : null;
+    const handled = await this.flow.onMessage(userId, {
+      messageId: inserted[0].id,
+      type: content.type,
+      text: content.text,
+      lineImageId,
+    });
     if (!handled) await this.flow.replyIfAway(userId, inserted[0].id);
   }
 

@@ -5,6 +5,7 @@ import type { Env } from '../config/env.js';
 import { BusinessHoursService } from '../settings/business-hours.service.js';
 import { DB, type Database } from '../db/database.module.js';
 import { type ChatState, chatStates, lineUsers, type Ticket } from '../db/schema.js';
+import { AttachmentsService } from './attachments.service.js';
 import { BotMessengerService, type BotMessage } from './bot-messenger.service.js';
 import { isSeverity, parseTicketCode, type Severity } from './sla.js';
 import * as say from './ticket-messages.js';
@@ -18,6 +19,8 @@ export interface IncomingMessage {
   messageId: string;
   type: string;
   text: string | null;
+  /** LINE's id for pictures we can download (sent from the LINE app, not an external link) */
+  lineImageId?: string | null;
 }
 
 /** Labels shown in the admin chat for each button the customer pressed. */
@@ -48,6 +51,7 @@ export class CustomerFlowService {
     private readonly tickets: TicketsService,
     private readonly bot: BotMessengerService,
     private readonly hours: BusinessHoursService,
+    private readonly attachments: AttachmentsService,
     config: ConfigService<Env, true>,
   ) {
     this.liffId = config.get('LIFF_ID', { infer: true });
@@ -72,6 +76,7 @@ export class CustomerFlowService {
     }
     if (action === 'cancel' || action === 'skip') {
       await this.clearState(userId);
+      if (action === 'cancel') await this.attachments.discardDrafts(userId);
       return reply(action === 'skip' ? say.thanksForRating() : say.cancelled());
     }
 
@@ -164,6 +169,14 @@ export class CustomerFlowService {
         return true;
 
       case 'await_description': {
+        if (message.lineImageId) {
+          const count = await this.attachments.saveFromLine(userId, message.lineImageId, null);
+          await this.touchState(userId);
+          // Several pictures arrive as separate events; answer the first one only
+          if (count === null) await reply(say.imageRejected());
+          else if (count === 1) await reply(say.imageReceived());
+          return true;
+        }
         if (!text) {
           await reply(say.textOnlyPlease());
           return true;
@@ -175,11 +188,30 @@ export class CustomerFlowService {
           description: text,
           messageId: message.messageId,
         });
-        await reply(say.ticketCreated(card(ticket), await this.hours.awayTicketNote()));
+        const images = await this.attachments.claimDrafts(userId, ticket.id);
+        await reply(say.ticketCreated(card(ticket), await this.hours.awayTicketNote(), images));
         return true;
       }
 
       case 'await_more_info': {
+        if (message.lineImageId && state.ticketId) {
+          const ticket = await this.tickets.findOwn(userId, { id: state.ticketId });
+          if (!ticket || ticket.status === 'closed') {
+            await this.clearState(userId);
+            await reply(say.staleAction());
+            return true;
+          }
+          const firstOfBatch = (await this.attachments.addedSince(ticket.id, 15_000)) === 0;
+          const count = await this.attachments.saveFromLine(userId, message.lineImageId, ticket.id);
+          await this.touchState(userId);
+          if (count === null) await reply(say.imageRejected());
+          else if (firstOfBatch) {
+            // First picture of this batch: note it on the ticket (restarts the clock if it was waiting) and confirm
+            await this.tickets.addCustomerMessage(ticket, '📎 แนบรูปเพิ่ม', message.messageId);
+            await reply(say.imagesAdded(card(ticket)));
+          }
+          return true;
+        }
         if (!text) {
           await reply(say.textOnlyPlease());
           return true;
@@ -281,6 +313,14 @@ export class CustomerFlowService {
       .insert(chatStates)
       .values({ userId, ...values })
       .onConflictDoUpdate({ target: chatStates.userId, set: values });
+  }
+
+  /** Keeps a started step alive while pictures keep coming. */
+  private async touchState(userId: string) {
+    await this.db
+      .update(chatStates)
+      .set({ expiresAt: new Date(Date.now() + STATE_TTL_MS), updatedAt: new Date() })
+      .where(eq(chatStates.userId, userId));
   }
 
   private async clearState(userId: string) {

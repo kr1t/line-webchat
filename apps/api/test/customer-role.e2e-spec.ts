@@ -55,6 +55,7 @@ describe('Customer role from the chat (e2e)', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ role: 'CUSTOMER', richMenu: 'linked' });
     expect(line.linkRichMenuIdToUser).toHaveBeenCalledWith(USER, RICH_MENU);
+    expect(line.createRichMenu).not.toHaveBeenCalled(); // CUSTOMER_RICH_MENU_ID is set in tests
 
     const [user] = await db.select().from(lineUsers).where(eq(lineUsers.userId, USER));
     expect(user).toMatchObject({ role: 'CUSTOMER', roleGrantedById: admin.id });

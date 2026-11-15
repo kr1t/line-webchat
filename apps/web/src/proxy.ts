@@ -5,6 +5,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * the API checks every request, and pages re-check through SSR.
  */
 export function proxy(request: NextRequest) {
+  // A LIFF app whose Endpoint URL is the site root lands here with liff.state; that is a customer, not an admin
+  const liffState = request.nextUrl.searchParams.get("liff.state");
+  if (request.nextUrl.pathname === "/" && liffState !== null) {
+    // Only same-site paths ("/join?invite=…"), never "//other.site"
+    const path = liffState.startsWith("/") && !liffState.startsWith("//") ? liffState : "/";
+    return NextResponse.redirect(new URL(`/liff${path === "/" ? "" : path}`, request.url));
+  }
   if (!request.cookies.has("lc_session")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }

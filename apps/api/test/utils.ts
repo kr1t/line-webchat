@@ -8,7 +8,7 @@ import { hashPassword } from '../src/auth/password.js';
 import { TokenService } from '../src/auth/token.service.js';
 import { DB, type Database } from '../src/db/database.module.js';
 import { type Admin, admins } from '../src/db/schema.js';
-import { LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
+import { LINE_BLOB_CLIENT, LINE_MESSAGING_CLIENT } from '../src/line/line.constants.js';
 import { LINE_ID_TOKEN_VERIFIER, type LineIdentity } from '../src/liff/liff.constants.js';
 
 export interface LineClientMock {
@@ -19,6 +19,10 @@ export interface LineClientMock {
   unlinkRichMenuIdFromUser: ReturnType<typeof vi.fn>;
   getMessageQuota: ReturnType<typeof vi.fn>;
   getMessageQuotaConsumption: ReturnType<typeof vi.fn>;
+  createRichMenu: ReturnType<typeof vi.fn>;
+  deleteRichMenu: ReturnType<typeof vi.fn>;
+  linkRichMenuIdToUsers: ReturnType<typeof vi.fn>;
+  setRichMenuImage: ReturnType<typeof vi.fn>;
 }
 
 export function createLineClientMock(): LineClientMock {
@@ -35,6 +39,11 @@ export function createLineClientMock(): LineClientMock {
     unlinkRichMenuIdFromUser: vi.fn(async () => ({})),
     getMessageQuota: vi.fn(async () => ({ type: 'limited', value: 200 })),
     getMessageQuotaConsumption: vi.fn(async () => ({ totalUsage: 20 })),
+    createRichMenu: vi.fn(async () => ({ richMenuId: `richmenu-${'a'.repeat(32)}` })),
+    deleteRichMenu: vi.fn(async () => ({})),
+    linkRichMenuIdToUsers: vi.fn(async () => ({})),
+    // Lives on the blob client in the SDK; one mock object serves both here
+    setRichMenuImage: vi.fn(async () => ({})),
   };
 }
 
@@ -44,6 +53,8 @@ export const fakeIdTokens = new Map<string, LineIdentity>();
 export async function createTestApp(line: LineClientMock) {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(LINE_MESSAGING_CLIENT)
+    .useValue(line)
+    .overrideProvider(LINE_BLOB_CLIENT)
     .useValue(line)
     .overrideProvider(LINE_ID_TOKEN_VERIFIER)
     .useValue(async (token: string) => fakeIdTokens.get(token) ?? null)

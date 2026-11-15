@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put } from '@nestjs/common';
-import { CurrentAdmin, Roles } from '../auth/decorators.js';
+import { CurrentAdmin, RequireStepUp, Roles } from '../auth/decorators.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import type { Admin } from '../db/schema.js';
+import { RichMenuService } from '../rich-menu/rich-menu.service.js';
 import { BusinessHoursService } from './business-hours.service.js';
 import { CannedService } from './canned.service.js';
 import { type BusinessHours, businessHoursSchema, type CannedBody, cannedBody, cannedIdSchema } from './settings.schemas.js';
@@ -13,7 +14,22 @@ export class SettingsController {
   constructor(
     private readonly hours: BusinessHoursService,
     private readonly canned: CannedService,
+    private readonly richMenu: RichMenuService,
   ) {}
+
+  @Get('settings/rich-menu')
+  richMenuStatus() {
+    return this.richMenu.status();
+  }
+
+  /** New menu on LINE (picks up a changed image) and every customer moved to it. */
+  @Roles('SUPER_ADMIN')
+  @RequireStepUp()
+  @Post('settings/rich-menu/rebuild')
+  @HttpCode(HttpStatus.OK)
+  rebuildRichMenu() {
+    return this.richMenu.rebuild();
+  }
 
   @Get('settings/business-hours')
   getHours() {

@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { AlertCircle, Bot, File, Image as ImageIcon, LayoutGrid, MapPin, Mic, MousePointerClick, Video } from "lucide-react";
 import { formatTime, messagePreview, sendErrorText } from "@/lib/format";
 import type { ChatMessage } from "@/lib/types";
+import { MediaContent } from "./media-content";
 
 const ICONS: Record<string, typeof File> = {
   image: ImageIcon,
@@ -31,11 +32,13 @@ function StickerContent({ message }: { message: ChatMessage }) {
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  /** Needed to fetch pictures and files of this chat */
+  userId: string;
   showTime: boolean;
   onRetry?: (message: ChatMessage) => void;
 }
 
-export function MessageBubble({ message, showTime, onRetry }: MessageBubbleProps) {
+export function MessageBubble({ message, userId, showTime, onRetry }: MessageBubbleProps) {
   const outgoing = message.direction === "out";
   const isSticker = message.type === "sticker";
   // Automatic replies from the ticket flow (cards, prompts) look different from what the team typed
@@ -59,6 +62,8 @@ export function MessageBubble({ message, showTime, onRetry }: MessageBubbleProps
       >
         {message.type === "text" ? (
           <p className="whitespace-pre-wrap break-words">{message.text}</p>
+        ) : !outgoing && ["image", "video", "audio", "file", "location"].includes(message.type) ? (
+          <MediaContent message={message} userId={userId} />
         ) : isSticker ? (
           <StickerContent message={message} />
         ) : (

@@ -25,6 +25,15 @@ export interface LineClientMock {
   linkRichMenuIdToUsers: ReturnType<typeof vi.fn>;
   setRichMenuImage: ReturnType<typeof vi.fn>;
   getMessageContent: ReturnType<typeof vi.fn>;
+  getMessageContentWithHttpInfo: ReturnType<typeof vi.fn>;
+}
+
+/** What LINE's content endpoint returns for a downloaded file. */
+export function lineContent(data: Buffer, contentType: string, length = data.length) {
+  return {
+    httpResponse: new Response(null, { headers: { 'content-type': contentType, 'content-length': String(length) } }),
+    body: Readable.from([data]),
+  };
 }
 
 /** Smallest bytes that look like a JPEG to the sniffer. */
@@ -50,6 +59,7 @@ export function createLineClientMock(): LineClientMock {
     // Lives on the blob client in the SDK; one mock object serves both here
     setRichMenuImage: vi.fn(async () => ({})),
     getMessageContent: vi.fn(async () => Readable.from([FAKE_JPEG])),
+    getMessageContentWithHttpInfo: vi.fn(async () => lineContent(FAKE_JPEG, 'image/jpeg')),
   };
 }
 
@@ -149,6 +159,14 @@ export function lineEvents(userId: string) {
       };
     },
     postback: (data: string) => ({ ...base(), type: 'postback', postback: { data } }),
+    file: (fileName: string) => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `file-${process.pid}-${eventSeq}`, type: 'file', fileName, fileSize: 100 } };
+    },
+    video: () => {
+      const b = base();
+      return { ...b, type: 'message', message: { id: `vid-${process.pid}-${eventSeq}`, type: 'video', duration: 1000, contentProvider: { type: 'line' } } };
+    },
     image: () => {
       const b = base();
       return { ...b, type: 'message', message: { id: `img-${process.pid}-${eventSeq}`, type: 'image', contentProvider: { type: 'line' } } };

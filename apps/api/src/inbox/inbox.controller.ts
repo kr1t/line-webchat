@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, Res } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import { type AuthedRequest, CurrentAdmin, RequireStepUp } from '../auth/decorators.js';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import type { Admin } from '../db/schema.js';
@@ -17,6 +18,7 @@ import {
   transferBody,
 } from './inbox.schemas.js';
 import { CustomerRoleService } from './customer-role.service.js';
+import { MediaService } from './media.service.js';
 import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 import { InboxService } from './inbox.service.js';
 import { ReplyService } from './reply.service.js';
@@ -30,6 +32,7 @@ export class InboxController {
     private readonly replies: ReplyService,
     private readonly status: ConversationStatusService,
     private readonly roles: CustomerRoleService,
+    private readonly media: MediaService,
   ) {}
 
   @Get()
@@ -63,6 +66,29 @@ export class InboxController {
     @Body(new ZodValidationPipe(sendMessageBody)) body: SendMessageBody,
   ) {
     return this.replies.send(userId, body.text, admin);
+  }
+
+  /**
+   * Picture/video/audio/file a customer sent. Files are served from the CMS origin, so nothing
+   * here can run: real images and known audio/video inline, everything else as a download,
+   * with a sandbox CSP and nosniff on top.
+   */
+  @Get(':userId/messages/:messageId/media')
+  async mediaFile(
+    @Param('userId', UserIdPipe) userId: string,
+    @Param('messageId', new ZodValidationPipe(messageIdSchema)) messageId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const file = await this.media.file(userId, messageId);
+    reply.header('content-type', file.contentType);
+    reply.header(
+      'content-disposition',
+      `${file.inline ? 'inline' : 'attachment'}; filename="download"; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+    );
+    reply.header('content-security-policy', "sandbox; default-src 'none'");
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('cache-control', 'private, max-age=86400');
+    return reply.send(file.data);
   }
 
   @Post(':userId/messages/:messageId/retry')

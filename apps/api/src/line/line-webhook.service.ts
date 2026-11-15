@@ -7,6 +7,7 @@ import { LINE_MESSAGING_CLIENT, PROFILE_TTL_MS, REPLY_TOKEN_TTL_MS } from './lin
 import { toStoredContent } from './line-message.mapper.js';
 import { ConversationStatusService } from '../conversations/conversation-status.service.js';
 import { CustomerFlowService } from '../tickets/customer-flow.service.js';
+import { MediaService, MEDIA_TYPES } from '../inbox/media.service.js';
 
 @Injectable()
 export class LineWebhookService {
@@ -17,6 +18,7 @@ export class LineWebhookService {
     @Inject(LINE_MESSAGING_CLIENT) private readonly line: messagingApi.MessagingApiClient,
     private readonly status: ConversationStatusService,
     private readonly flow: CustomerFlowService,
+    private readonly media: MediaService,
   ) {}
 
   /**
@@ -81,6 +83,10 @@ export class LineWebhookService {
       })
       .where(eq(lineUsers.userId, userId));
     await this.status.reopenIfClosed(userId);
+
+    // Copy pictures, video, audio and files now: LINE deletes content after a while
+    const fromLine = event.message.type === 'file' || (event.message as { contentProvider?: { type?: string } }).contentProvider?.type === 'line';
+    if (MEDIA_TYPES.has(event.message.type) && fromLine) await this.media.capture(inserted[0].id, event.message.id);
 
     const lineImageId =
       event.message.type === 'image' && event.message.contentProvider?.type === 'line' ? event.message.id : null;

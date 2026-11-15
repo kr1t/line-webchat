@@ -337,6 +337,17 @@ export const ticketAttachments = pgTable(
   ],
 );
 
+/** Pictures, video, audio and files customers send in the chat, copied before LINE deletes them. */
+export const messageMedia = pgTable('message_media', {
+  messageId: uuid('message_id')
+    .primaryKey()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').notNull(),
+  size: integer('size').notNull(),
+  data: bytea('data').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type Admin = typeof admins.$inferSelect;
 export type LineUser = typeof lineUsers.$inferSelect;
 export type Message = typeof messages.$inferSelect;
@@ -362,4 +373,5 @@ export const schema = {
   cannedResponses,
   settings,
   ticketAttachments,
+  messageMedia,
 };

@@ -36,7 +36,8 @@ export class TokenService {
 
   constructor(config: ConfigService<Env, true>) {
     this.key = new TextEncoder().encode(config.get('JWT_SECRET', { infer: true }));
-    this.secureCookies = config.get('NODE_ENV', { infer: true }) === 'production';
+    // Vercel sets VERCEL=1 on every deployment, so cookies stay Secure there without NODE_ENV
+    this.secureCookies = config.get('NODE_ENV', { infer: true }) === 'production' || Boolean(process.env.VERCEL);
   }
 
   async sign(audience: Audience, admin: Pick<Admin, 'id' | 'tokenVersion'>, stage?: MfaStage) {

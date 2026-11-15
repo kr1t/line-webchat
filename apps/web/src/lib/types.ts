@@ -153,6 +153,7 @@ export interface TicketEvent {
 }
 
 export interface TicketDetail extends TicketListItem {
+  attachments: TicketAttachment[];
   description: string;
   reporterFollowing: boolean;
   ratingComment: string | null;
@@ -233,5 +234,13 @@ export interface RoleInvite {
   usedByUserId: string | null;
   usedByName: string | null;
   createdByName: string | null;
+  createdAt: string;
+}
+
+export interface TicketAttachment {
+  id: string;
+  contentType: string;
+  size: number;
+  source?: "line" | "liff";
   createdAt: string;
 }

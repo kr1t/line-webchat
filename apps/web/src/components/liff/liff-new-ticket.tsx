@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Check } from "lucide-react";
 import type { Severity, TicketCategory } from "@/lib/types";
 import { primaryButton } from "./brand";
+import { ImagePicker, uploadImage } from "./image-picker";
 import { LEVELS, type LiffTicket } from "./liff-data";
 import { liffFetch, useLiff } from "./liff-provider";
 
@@ -26,6 +27,8 @@ export function LiffNewTicket() {
   const [category, setCategory] = useState<TicketCategory>("other");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +42,13 @@ export function LiffNewTicket() {
     setError(null);
     try {
       const ticket = await liffFetch<LiffTicket>("/tickets", { method: "POST", body: { severity, category, title, description } });
-      router.replace(`/liff/tickets/${ticket.id}?created=1`);
+      let failed = 0;
+      for (const [i, file] of images.entries()) {
+        setProgress(`กำลังส่งรูป ${i + 1}/${images.length}`);
+        // The ticket exists already; a picture that fails can be added again from the ticket page
+        await uploadImage(ticket.id, file).catch(() => failed++);
+      }
+      router.replace(`/liff/tickets/${ticket.id}?created=1${failed ? `&failed=${failed}` : ""}`);
     } catch {
       setError("ส่งไม่สำเร็จ ตรวจว่ากรอกหัวข้ออย่างน้อย 3 ตัวอักษร และรายละเอียดอย่างน้อย 5 ตัวอักษร");
       setSending(false);
@@ -110,11 +119,17 @@ export function LiffNewTicket() {
           required
           minLength={5}
         />
+        <div>
+          <p className="mb-2 text-sm font-semibold">
+            รูปหน้าจอ <span className="font-normal text-zinc-500">(ไม่บังคับ สูงสุด 10 รูป)</span>
+          </p>
+          <ImagePicker files={images} onChange={setImages} />
+        </div>
       </section>
 
       {error && <p className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>}
       <button type="submit" disabled={sending} className={primaryButton}>
-        {sending ? "กำลังส่ง…" : "ส่งเรื่อง"}
+        {sending ? (progress ?? "กำลังส่ง…") : "ส่งเรื่อง"}
       </button>
     </form>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import clsx from "clsx";
@@ -69,6 +70,25 @@ export function TicketDetail({ initial, me }: { initial: Detail; me: AdminProfil
           )}
         </header>
 
+        {ticket.attachments.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-border bg-surface p-4">
+            <p className="mb-2 text-sm font-medium">รูปจากลูกค้า ({ticket.attachments.length})</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {ticket.attachments.map((a, i) => (
+                <a
+                  key={a.id}
+                  href={`/api/tickets/${ticket.id}/attachments/${a.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-border hover:opacity-90"
+                  title={`${a.source === "line" ? "ส่งในแชท LINE" : "อัปโหลดจากหน้า tickget"} · ${Math.round(a.size / 1024)} KB`}
+                >
+                  <Image src={`/api/tickets/${ticket.id}/attachments/${a.id}`} alt={`รูปที่ ${i + 1}`} fill sizes="160px" className="object-cover" unoptimized />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
         <Thread ticket={ticket} />
         <ReplyBox
           ticketId={ticket.id}

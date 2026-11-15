@@ -15,6 +15,7 @@ export interface LiffTicket {
 
 export interface LiffTicketDetail extends LiffTicket {
   description: string;
+  attachments: { id: string; contentType: string; size: number; createdAt: string }[];
   messages: { id: string; from: "customer" | "admin" | "system"; authorName: string | null; body: string; createdAt: string }[];
   statusHistory: { status: TicketStatus; at: string }[];
 }
